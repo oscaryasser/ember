@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview --port 4173 --strictPort",
     "icons": "node scripts/make-icons.mjs",
-    "test": "node scripts/test.mjs"
+    "test": "node scripts/test.mjs",
+    "smoke": "node scripts/smoke.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",
@@ -16,6 +17,8 @@
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.4",
+    "fake-indexeddb": "^6.2.5",
+    "happy-dom": "^20.10.6",
     "sharp": "^0.33.5",
     "vite": "^5.4.11",
     "vite-plugin-pwa": "^0.21.1"

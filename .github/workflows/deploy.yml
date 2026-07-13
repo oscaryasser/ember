@@ -26,6 +26,7 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build
+      - run: npm run smoke   # boots the built bundle headless - mirror rescue + every tab renders
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
