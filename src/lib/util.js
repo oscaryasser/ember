@@ -3,21 +3,46 @@ export const num = (v) => {
   return isNaN(n) ? null : n;
 };
 
+// Food-log entries for a day. Each entry stores its own computed totals so
+// history survives library edits and deletions.
+export const mealsOf = (d) => (d && Array.isArray(d.meals) ? d.meals : []);
+
+export const mealTotals = (d) => {
+  const t = { kcal: 0, p: 0, c: 0, f: 0 };
+  for (const m of mealsOf(d)) {
+    t.kcal += num(m.kcal) || 0;
+    t.p += num(m.p) || 0;
+    t.c += num(m.c) || 0;
+    t.f += num(m.f) || 0;
+  }
+  return t;
+};
+
+// Calories in: a typed MFP total always wins; otherwise the food log fills it.
+export const intakeOf = (day) => {
+  if (!day) return null;
+  const manual = num(day.calIn);
+  if (manual !== null) return manual;
+  const meals = mealTotals(day).kcal;
+  return meals > 0 ? Math.round(meals) : null;
+};
+
 // Net energy for a day: calories in minus total burn. Negative = deficit.
 export const netOf = (day) => {
   if (!day) return null;
-  const cin = num(day.calIn);
+  const cin = intakeOf(day);
   const act = num(day.calActive);
   const rest = num(day.calResting);
   if (cin === null || (act === null && rest === null)) return null;
   return cin - ((act || 0) + (rest || 0));
 };
 
-// Total protein: legacy single `protein` field plus quick-add entries.
+// Total protein: legacy single `protein` field, quick-add entries, and the
+// food log's protein all count — they're different foods, not duplicates.
 export const proteinOf = (d) => {
   if (!d) return 0;
   const legacy = num(d.protein) || 0;
-  return legacy + (d.proteinEntries || []).reduce((a, b) => a + b, 0);
+  return legacy + (d.proteinEntries || []).reduce((a, b) => a + b, 0) + mealTotals(d).p;
 };
 
 export const hasAnyLog = (d) =>
@@ -26,6 +51,7 @@ export const hasAnyLog = (d) =>
     netOf(d) !== null ||
     num(d.weight) !== null ||
     proteinOf(d) > 0 ||
+    mealsOf(d).length > 0 ||
     num(d.steps) !== null ||
     num(d.sleepHours) !== null);
 
@@ -68,6 +94,19 @@ export function sanitizeDay(d) {
       .filter((v) => v !== null && v > 0);
   }
   if (d.measurements !== undefined && (typeof d.measurements !== "object" || d.measurements === null)) delete out.measurements;
+  if (d.meals !== undefined) {
+    out.meals = (Array.isArray(d.meals) ? d.meals : [])
+      .filter((m) => m && typeof m === "object" && !Array.isArray(m))
+      .map((m) => ({
+        name: typeof m.name === "string" ? m.name : "food",
+        qty: num(m.qty) ?? 1,
+        kcal: num(m.kcal) ?? 0,
+        p: num(m.p) ?? 0,
+        c: num(m.c) ?? 0,
+        f: num(m.f) ?? 0,
+        ...(m.foodId !== undefined ? { foodId: m.foodId } : {}),
+      }));
+  }
   if (d.pullups !== undefined) {
     if (d.pullups && typeof d.pullups === "object" && !Array.isArray(d.pullups)) {
       out.pullups = { ...d.pullups, sets: Array.isArray(d.pullups.sets) ? d.pullups.sets : [] };

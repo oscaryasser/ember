@@ -62,6 +62,13 @@ export function mergeImport(current, imported) {
   if (imported.runWeek) merged.runWeek = imported.runWeek;
   if (imported.runAck) merged.runAck = { ...current.runAck, ...imported.runAck };
   if (imported.custom) merged.custom = mergeCustom(current.custom, imported.custom);
+  if (Array.isArray(imported.foods)) {
+    const byId = new Map((current.foods || []).map((f) => [f.id, f]));
+    for (const f of imported.foods) {
+      if (f && typeof f === "object" && typeof f.name === "string") byId.set(f.id ?? f.name, f);
+    }
+    merged.foods = [...byId.values()];
+  }
   if (imported.goals) merged.goals = { ...current.goals, ...imported.goals };
   if (imported.targetWeight && !imported.goals) {
     merged.goals = { ...merged.goals, targetWeight: imported.targetWeight };

@@ -2,7 +2,8 @@
 import assert from "node:assert/strict";
 import { buildRunSegments, totalSecs, RUN_WEEKS } from "../src/plan.js";
 import { normalizeImport, summarizeImport, mergeImport } from "../src/lib/importExport.js";
-import { num, netOf, proteinOf, e1rm, sanitizeDay, safeParse, pickFresher } from "../src/lib/util.js";
+import { num, netOf, proteinOf, e1rm, sanitizeDay, safeParse, pickFresher, intakeOf, mealTotals } from "../src/lib/util.js";
+import { estimateTDEE, resolveTargets, weightSlope, kcalFromMacros } from "../src/lib/adaptive.js";
 import { weekStatsFor, coachVerdict, logStreak, fullWeekStreak } from "../src/lib/coach.js";
 import { todayKey, keyOffset, keyPlus, weekKeys } from "../src/lib/dates.js";
 import {
@@ -215,6 +216,89 @@ test("fullWeekStreak: consecutive completed 2+2 weeks before this one", () => {
   assert.equal(fullWeekStreak({ days, goals: GOALS }, todayKey()), 2);
   delete days[keyPlus(mon, -14)];
   assert.equal(fullWeekStreak({ days, goals: GOALS }, todayKey()), 1);
+});
+
+console.log("food log");
+const mealDay = {
+  meals: [
+    { name: "Fairlife shake", qty: 1, kcal: 150, p: 30, c: 4, f: 2.5 },
+    { name: "Chicken bowl", qty: 1.5, kcal: 675, p: 52.5, c: 60, f: 22.5 },
+  ],
+};
+test("mealTotals sums entries", () => {
+  const t = mealTotals(mealDay);
+  assert.equal(t.kcal, 825);
+  assert.equal(t.p, 82.5);
+});
+test("intakeOf: typed MFP total overrides the food log", () => {
+  assert.equal(intakeOf(mealDay), 825);
+  assert.equal(intakeOf({ ...mealDay, calIn: "1900" }), 1900);
+  assert.equal(intakeOf({ calIn: "", meals: [] }), null);
+  assert.equal(intakeOf(undefined), null);
+});
+test("netOf works from meals alone", () => {
+  assert.equal(netOf({ ...mealDay, calActive: "400", calResting: "1700" }), 825 - 2100);
+});
+test("proteinOf counts legacy + quick-adds + food log", () => {
+  assert.equal(proteinOf({ ...mealDay, protein: "10", proteinEntries: [20] }), 10 + 20 + 82.5);
+});
+test("kcalFromMacros uses 4/4/9", () => {
+  assert.equal(kcalFromMacros(40, 30, 10), 370);
+  assert.equal(kcalFromMacros("", "", ""), 0);
+});
+test("sanitizeDay repairs malformed meals", () => {
+  const c = sanitizeDay({ meals: [{ name: 5, qty: "x", kcal: "150", p: "30" }, "junk", null] });
+  assert.equal(c.meals.length, 1);
+  assert.deepEqual(c.meals[0], { name: "food", qty: 1, kcal: 150, p: 30, c: 0, f: 0 });
+});
+test("mergeImport unions food libraries by id", () => {
+  const cur = { days: {}, runWeek: 1, runAck: {}, custom: {}, goals: GOALS, foods: [{ id: "f1", name: "Old", kcal: 100, p: 10, c: 5, f: 3 }] };
+  const m = mergeImport(cur, { days: {}, foods: [{ id: "f1", name: "Old v2", kcal: 110, p: 11, c: 5, f: 3 }, { id: "f2", name: "New", kcal: 200, p: 20, c: 10, f: 8 }] });
+  assert.equal(m.foods.length, 2);
+  assert.equal(m.foods.find((f) => f.id === "f1").name, "Old v2");
+});
+
+console.log("adaptive targets");
+const adaptiveDays = () => {
+  const days = {};
+  for (let i = 0; i < 28; i++) days[keyOffset(-i)] = { calIn: "2000" };
+  // perfectly linear −0.1 lb/day across weigh-ins at x = 1, 8, 15, 22
+  for (const [i, w] of [[27, 212.0], [20, 211.3], [13, 210.6], [6, 209.9]]) {
+    days[keyOffset(-i)] = { ...days[keyOffset(-i)], weight: String(w) };
+  }
+  return days;
+};
+test("weightSlope: least squares on sparse weigh-ins", () => {
+  const s = weightSlope([{ x: 1, y: 212 }, { x: 8, y: 211.3 }, { x: 15, y: 210.6 }, { x: 22, y: 209.9 }]);
+  assert.ok(Math.abs(s - -0.1) < 1e-9, `slope ${s}`);
+});
+test("estimateTDEE: intake + weight trend → measured burn", () => {
+  const est = estimateTDEE({ days: adaptiveDays(), goals: GOALS });
+  assert.equal(est.ok, true);
+  assert.equal(est.tdee, 2350); // 2000 + 0.1×3500
+  assert.equal(est.lbsPerWeek, -0.7);
+  assert.equal(est.intakeDays, 28);
+});
+test("estimateTDEE: refuses to guess without enough data", () => {
+  assert.equal(estimateTDEE({ days: {}, goals: GOALS }).ok, false);
+  const fewWeights = adaptiveDays();
+  for (const k of Object.keys(fewWeights)) delete fewWeights[k].weight;
+  assert.match(estimateTDEE({ days: fewWeights, goals: GOALS }).reason, /weigh-ins/);
+});
+test("resolveTargets: auto chain kcal → fat 30% → carbs remainder", () => {
+  const t = resolveTargets({ days: adaptiveDays(), goals: GOALS });
+  assert.equal(t.kcal, 1850); // 2350 − 500
+  assert.equal(t.fat, 60);    // 30% of 1850 / 9, rounded to 5
+  assert.equal(t.carbs, 170); // (1850 − 160×4 − 60×9) / 4, rounded to 5
+  assert.equal(t.kcalAuto, true);
+});
+test("resolveTargets: manual goals always win over adaptive", () => {
+  const t = resolveTargets({ days: adaptiveDays(), goals: { ...GOALS, calTarget: "2200", fat: "80" } });
+  assert.equal(t.kcal, 2200);
+  assert.equal(t.fat, 80);
+  assert.equal(t.kcalAuto, false);
+  const cold = resolveTargets({ days: {}, goals: { ...GOALS, calTarget: "2200" } });
+  assert.equal(cold.kcal, 2200); // manual target works with zero history
 });
 
 console.log("dual-store rescue path");

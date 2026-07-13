@@ -17,6 +17,9 @@ export const DEFAULT_GOALS = {
   restSecs: 90,        // strength rest timer
   pullupDays: 5,       // grease-the-groove days per week
   pullupTarget: 10,    // strict-rep goal on the max-test chart
+  calTarget: "",       // daily intake target; blank = auto from measured TDEE − deficit
+  carbs: "",           // carb g target; blank = auto (calories left after protein + fat)
+  fat: "",             // fat g target; blank = auto (30% of calories)
 };
 
 const emptyDay = () => ({
@@ -44,6 +47,7 @@ function migrate(parsed) {
     runWeek: d.runWeek || 1,
     runAck: d.runAck || {},
     custom: d.custom || {},
+    foods: Array.isArray(d.foods) ? d.foods.filter((f) => f && typeof f === "object" && typeof f.name === "string") : [],
     goals: { ...DEFAULT_GOALS, ...(d.goals || {}), ...(!d.goals && d.targetWeight ? { targetWeight: d.targetWeight } : {}) },
   };
 }

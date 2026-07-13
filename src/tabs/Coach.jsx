@@ -4,6 +4,7 @@ import { num, netOf, proteinOf } from "../lib/util.js";
 import { todayKey, keyOffset, shortDay } from "../lib/dates.js";
 import { coachVerdict, logStreak, fullWeekStreak } from "../lib/coach.js";
 import { BalanceBars, Sparkline } from "../components/charts.jsx";
+import AdaptiveTargets from "../features/AdaptiveTargets.jsx";
 
 const TONE = { good: "var(--good)", warn: "var(--ember)", bad: "var(--bad)", dim: "var(--dim)" };
 
@@ -60,6 +61,8 @@ export default function Coach({ data }) {
           </div>
         ))}
       </Card>
+
+      <AdaptiveTargets data={data} />
 
       {/* streaks */}
       <div className="row" style={{ gap: 10, marginBottom: 12 }}>

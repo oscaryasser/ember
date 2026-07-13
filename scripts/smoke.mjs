@@ -108,6 +108,9 @@ for (const [tab, marker] of TABS) {
   console.log(`  ✓ ${tab} tab renders`);
 }
 
+assert.ok(text().includes("Food log"), "food log card present on Today");
+console.log("  ✓ food log card renders");
+
 // Coach must be judging against the mirror's edited goal, not a default.
 await clickByText("Coach");
 assert.ok(text().includes("goal 172+"), "verdict uses the imported protein goal");

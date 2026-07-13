@@ -18,6 +18,9 @@ const GOAL_FIELDS = [
   { id: "restSecs", label: "Rest timer", unit: "seconds", int: true },
   { id: "pullupDays", label: "Pull-up days", unit: "days/week", int: true, hint: "The grease-the-groove program — 5–6 easy days beats 2 hard ones." },
   { id: "pullupTarget", label: "Pull-up target", unit: "strict reps", int: true, hint: "Goal line on the max-test chart." },
+  { id: "calTarget", label: "Calorie target", unit: "kcal/day", blankAuto: true, hint: "Blank = adaptive: measured TDEE − deficit (see the Coach tab)." },
+  { id: "fat", label: "Fat target", unit: "g/day", blankAuto: true, hint: "Blank = auto (30% of calories)." },
+  { id: "carbs", label: "Carb target", unit: "g/day", blankAuto: true, hint: "Blank = auto (calories left after protein + fat)." },
 ];
 
 export default function Goals({ data, update, saveState, lastSaved }) {
@@ -31,9 +34,9 @@ export default function Goals({ data, update, saveState, lastSaved }) {
 
   const setGoal = (id, v) => update((d) => ({ ...d, goals: { ...d.goals, [id]: v } }));
 
-  const commitGoal = (id, v, int) => {
+  const commitGoal = (id, v, int, blankAuto) => {
     const n = parseFloat(v);
-    if (id === "targetWeight") return; // free text, blank allowed
+    if (id === "targetWeight" || blankAuto) return; // blank is a valid value (auto/unset)
     if (isNaN(n) || n <= 0) setGoal(id, DEFAULT_GOALS[id]);
     else setGoal(id, int ? Math.round(n) : n);
   };
@@ -80,10 +83,10 @@ export default function Goals({ data, update, saveState, lastSaved }) {
               <div className="field-label">{f.label} <span className="unit">{f.unit}</span></div>
               <input
                 inputMode="decimal"
-                placeholder={f.id === "targetWeight" ? "not set" : String(DEFAULT_GOALS[f.id])}
+                placeholder={f.id === "targetWeight" ? "not set" : f.blankAuto ? "auto" : String(DEFAULT_GOALS[f.id])}
                 value={goals[f.id] ?? ""}
                 onChange={(e) => setGoal(f.id, sanitizeDecimal(e.target.value))}
-                onBlur={(e) => commitGoal(f.id, e.target.value, f.int)}
+                onBlur={(e) => commitGoal(f.id, e.target.value, f.int, f.blankAuto)}
               />
               {f.hint && <div style={{ fontSize: 11, color: "var(--dim)", marginTop: 4 }}>{f.hint}</div>}
             </div>

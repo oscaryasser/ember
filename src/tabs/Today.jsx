@@ -8,6 +8,7 @@ import StrengthCard from "../features/StrengthCard.jsx";
 import RunCard from "../features/RunCard.jsx";
 import { GarminCard, ProteinCard, EnergyLedger } from "../features/DailyCards.jsx";
 import PullupCard from "../features/PullupCard.jsx";
+import FoodCard from "../features/FoodCard.jsx";
 
 export default function Today({ data, update, goTo }) {
   const [dateKey, setDateKey] = useState(todayKey());
@@ -174,6 +175,7 @@ export default function Today({ data, update, goTo }) {
       {day.activities.includes("B") && <StrengthCard id="B" data={data} day={day} setDay={setDay} update={update} dateKey={dateKey} />}
 
       <PullupCard data={data} day={day} setDay={setDay} dateKey={dateKey} goals={goals} />
+      <FoodCard data={data} day={day} setDay={setDay} update={update} />
       <GarminCard day={day} setDay={setDay} />
       <ProteinCard day={day} setDay={setDay} goal={goals.protein} />
       <EnergyLedger day={day} goals={goals} />

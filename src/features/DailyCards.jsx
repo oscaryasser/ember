@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { Card, SectionLabel, Field } from "../components/ui.jsx";
-import { num, netOf, proteinOf, sanitizeDecimal } from "../lib/util.js";
+import { num, netOf, proteinOf, intakeOf, mealsOf, sanitizeDecimal } from "../lib/util.js";
 
 // Garmin log: calories in/out, steps, sleep — collapsible.
 export function GarminCard({ day, setDay }) {
   const [collapsed, setCollapsed] = useState(true);
-  const cin = num(day.calIn);
+  const cin = intakeOf(day);
   const out = (num(day.calActive) || 0) + (num(day.calResting) || 0);
   return (
     <Card style={{ marginTop: 16 }}>
@@ -20,7 +20,7 @@ export function GarminCard({ day, setDay }) {
       </button>
       {!collapsed && (
         <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
-          <Field label="Calories in" unit="kcal · from MFP" value={day.calIn} onChange={(v) => setDay({ calIn: v })} color="var(--fuel)" />
+          <Field label="Calories in" unit={mealsOf(day).length ? "kcal · overrides the food log" : "kcal · MFP total or food log"} value={day.calIn} onChange={(v) => setDay({ calIn: v })} color="var(--fuel)" />
           <Field label="Active burn" unit="kcal" value={day.calActive} onChange={(v) => setDay({ calActive: v })} color="var(--ember)" />
           <Field label="Resting burn" unit="kcal" value={day.calResting} onChange={(v) => setDay({ calResting: v })} color="var(--ember)" />
           <Field label="Workout time" unit="min" value={day.mins} onChange={(v) => setDay({ mins: v })} />
@@ -116,7 +116,7 @@ export function ProteinCard({ day, setDay, goal }) {
 
 // Net energy balance — the signature card.
 export function EnergyLedger({ day, goals }) {
-  const cin = num(day.calIn) || 0;
+  const cin = intakeOf(day) || 0;
   const out = (num(day.calActive) || 0) + (num(day.calResting) || 0);
   const max = Math.max(cin, out, 1);
   const net = netOf(day);
