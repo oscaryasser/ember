@@ -53,6 +53,31 @@ export default function Plan({ data }) {
       ))}
 
       <Card style={{ marginTop: 12 }}>
+        <SectionLabel color="var(--good)">Pull-up program · grease the groove</SectionLabel>
+        <div style={{ fontSize: 15, lineHeight: 1.55, marginBottom: 10 }}>
+          Runs <b>beside</b> the A/B sessions, not inside them — <b>{goals.pullupDays} days a week</b>, easy sets spread
+          through the day, <b>never to failure</b>. Grips rotate <b>chin → neutral → wide</b> one day each, so every angle
+          gets trained and nothing gets overused. Strength grows from frequency, not from grinding.
+        </div>
+        {[
+          ["Test day", "No max on file (or 10+ days old): one honest max set of strict chin-ups. Zero is a valid score — it just picks your level."],
+          ["Foundation — max 0", "5 × 3 slow negatives (jump up, 5 s down) or 5 × 5 band-assisted reps."],
+          ["Groove — max 1–3", "6 easy sets of half your max (min 1), spread through the day."],
+          ["Volume — max 4–7", "5 easy sets of ~50% of max — always crisp."],
+          ["Density — max 8+", "5 sets of ~60% of max; make one set weighted once a week."],
+        ].map(([name, txt], i) => (
+          <div key={name} className="row" style={{ gap: 12, padding: "8px 0", borderTop: i ? "1px solid var(--line)" : "none", alignItems: "baseline" }}>
+            <div className="display" style={{ fontWeight: 700, fontSize: 15, color: "var(--good)", width: 118, flexShrink: 0 }}>{name}</div>
+            <div style={{ fontSize: 13, color: "var(--dim)" }}>{txt}</div>
+          </div>
+        ))}
+        <div style={{ fontSize: 13, color: "var(--dim)", marginTop: 8 }}>
+          Rules: stop every set 2+ reps short of failure · 15+ min between sets beats one block · on lift days 2–3 easy
+          sets is plenty · retest each grip every ~10 days · sore elbows = rest day. Target: {goals.pullupTarget} strict reps.
+        </div>
+      </Card>
+
+      <Card style={{ marginTop: 12 }}>
         <SectionLabel>Nutrition anchors</SectionLabel>
         <div style={{ fontSize: 15, lineHeight: 1.6 }}>
           Eat <b style={{ color: "var(--fuel)" }}>2,000–2,200 kcal/day</b> to start, then trust the app's real numbers over the estimate.

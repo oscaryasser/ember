@@ -1,5 +1,6 @@
 import { keyOffset, weekKeys, keyPlus } from "./dates.js";
 import { netOf, num, proteinOf, hasAnyLog } from "./util.js";
+import { weekPullupDays, weekPullupReps, pullupStarted } from "./pullups.js";
 
 export function weekStatsFor(data, dateKey) {
   const wk = weekKeys(dateKey);
@@ -67,6 +68,15 @@ export function coachVerdict(data, dateKey) {
     { ok: avgProt !== null && avgProt >= g.protein - 10, txt: avgProt === null ? "Protein: not logged yet" : `Protein: ${Math.round(avgProt)}g/day average (goal ${g.protein}+)` },
     { ok: lossRate !== null && lossRate >= 0.2 && (lossPct === null || lossPct <= g.maxLossPct), txt: lossRate === null ? "Weight: need weigh-ins in both of the last two weeks" : `Weight: ${lossRate >= 0 ? "−" : "+"}${Math.abs(lossRate).toFixed(1)} lb vs last week's average` },
   ];
+
+  const pullDays = weekPullupDays(data, dateKey);
+  const pullReps = weekPullupReps(data, dateKey);
+  lines.push({
+    ok: pullDays >= g.pullupDays,
+    txt: pullupStarted(data) || pullDays > 0
+      ? `Pull-ups: ${pullDays}/${g.pullupDays} days · ${pullReps} reps this week`
+      : "Pull-ups: not started — log a max test in the Today card to begin",
+  });
 
   return { headline, tone, lines, weekStats, lossRate, lossPct, avgProt, sessions, sessionTarget };
 }

@@ -3,6 +3,7 @@ import { Card, SectionLabel } from "../components/ui.jsx";
 import { num } from "../lib/util.js";
 import { LineChart } from "../components/charts.jsx";
 import StrengthProgress from "../features/StrengthProgress.jsx";
+import PullupProgress from "../features/PullupProgress.jsx";
 import Measurements from "../features/Measurements.jsx";
 import Photos from "../features/Photos.jsx";
 
@@ -101,6 +102,7 @@ export default function Progress({ data, update }) {
       </Card>
 
       <StrengthProgress data={data} />
+      <PullupProgress data={data} goals={goals} />
       <Measurements data={data} update={update} />
       <Photos />
     </div>

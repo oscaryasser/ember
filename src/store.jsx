@@ -14,6 +14,8 @@ export const DEFAULT_GOALS = {
   weeklyStrength: 2,
   maxLossPct: 1.5,     // % bodyweight per week — faster than this burns muscle
   restSecs: 90,        // strength rest timer
+  pullupDays: 5,       // grease-the-groove days per week
+  pullupTarget: 10,    // strict-rep goal on the max-test chart
 };
 
 export const EMPTY_DAY = {

@@ -16,6 +16,8 @@ const GOAL_FIELDS = [
   { id: "weeklyStrength", label: "Strength per week", unit: "sessions", int: true },
   { id: "maxLossPct", label: "Max healthy loss rate", unit: "% bodyweight/wk", hint: "Faster than this and the coach tells you to eat more." },
   { id: "restSecs", label: "Rest timer", unit: "seconds", int: true },
+  { id: "pullupDays", label: "Pull-up days", unit: "days/week", int: true, hint: "The grease-the-groove program — 5–6 easy days beats 2 hard ones." },
+  { id: "pullupTarget", label: "Pull-up target", unit: "strict reps", int: true, hint: "Goal line on the max-test chart." },
 ];
 
 export default function Goals({ data, update, saveState, lastSaved }) {

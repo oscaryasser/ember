@@ -3,6 +3,10 @@ import assert from "node:assert/strict";
 import { buildRunSegments, totalSecs, RUN_WEEKS } from "../src/plan.js";
 import { normalizeImport, summarizeImport, mergeImport } from "../src/lib/importExport.js";
 import { num, netOf, proteinOf, e1rm } from "../src/lib/util.js";
+import {
+  suggestedGrip, prescription, workingMax, bestTestBefore, testDue,
+  weekPullupDays, weekPullupReps, pullupVolume, GRIP_ORDER,
+} from "../src/lib/pullups.js";
 
 let passed = 0;
 const test = (name, fn) => {
@@ -115,6 +119,63 @@ test("merge: imported days win, goals inherit targetWeight, custom union", () =>
   // legacy day content preserved verbatim
   assert.equal(proteinOf(m.days["2026-06-01"]), 125);
   assert.equal(m.days["2026-06-01"].sets.A["Leg press or goblet squat"].length, 2);
+});
+
+console.log("pull-up program");
+const pDay = (grip, reps, extra = {}) => ({ pullups: { sets: [{ grip, reps, assist: "full" }], ...extra } });
+const pData = {
+  days: {
+    // Mon Jun 29 → Sun Jul 5 week for week-stat tests
+    "2026-06-29": pDay("chin", 3, { test: { grip: "chin", reps: 5 } }),
+    "2026-06-30": pDay("neutral", 2),
+    "2026-07-02": pDay("wide", 2),
+    "2026-07-03": { pullups: { sets: [{ grip: "chin", reps: 3 }, { grip: "chin", reps: 3, assist: "band" }] } },
+  },
+};
+test("grip rotation by session count: chin → neutral → wide → chin", () => {
+  assert.equal(suggestedGrip({ days: {} }, "2026-07-12"), "chin");
+  assert.equal(suggestedGrip(pData, "2026-06-30"), "neutral"); // one prior day
+  assert.equal(suggestedGrip(pData, "2026-07-03"), "chin");    // three prior days wraps
+  // a started day stays on its own grip
+  assert.equal(suggestedGrip(pData, "2026-06-30" ) , "neutral");
+  assert.equal(suggestedGrip(pData, "2026-07-02"), "wide");
+});
+test("prescription tiers", () => {
+  assert.equal(prescription(null).level, "Test day");
+  assert.equal(prescription(0).level, "Foundation");
+  const g = prescription(2); assert.equal(g.level, "Groove"); assert.equal(g.reps, 1);
+  const v = prescription(6); assert.equal(v.level, "Volume"); assert.equal(v.reps, 3);
+  const d = prescription(10); assert.equal(d.level, "Density"); assert.equal(d.reps, 6);
+});
+test("workingMax: exact grip beats fallback", () => {
+  const wm = workingMax(pData, "chin");
+  assert.equal(wm.reps, 5); assert.equal(wm.exact, true);
+  const fb = workingMax(pData, "wide");
+  assert.equal(fb.reps, 5); assert.equal(fb.exact, false); // falls back to chin test
+  assert.equal(workingMax({ days: {} }, "chin"), null);
+});
+test("bestTestBefore for PR detection", () => {
+  assert.equal(bestTestBefore(pData, "chin", "2026-07-12"), 5);
+  assert.equal(bestTestBefore(pData, "chin", "2026-06-29"), null); // strictly before
+  assert.equal(bestTestBefore(pData, "wide", "2026-07-12"), null);
+});
+test("testDue: never tested or 10+ days", () => {
+  assert.equal(testDue(pData, "wide", "2026-07-12"), true);          // never tested
+  assert.equal(testDue(pData, "chin", "2026-07-03"), false);         // 4 days after
+  assert.equal(testDue(pData, "chin", "2026-07-09"), true);          // 10 days after
+});
+test("week stats: days and reps in the Monday week", () => {
+  assert.equal(weekPullupDays(pData, "2026-07-01"), 4);
+  assert.equal(weekPullupReps(pData, "2026-07-01"), 3 + 2 + 2 + 6);
+  assert.equal(weekPullupDays(pData, "2026-07-08"), 0);
+});
+test("pullupVolume counts band and negative reps", () => {
+  assert.equal(pullupVolume(pData.days["2026-07-03"]), 6);
+  assert.equal(pullupVolume(undefined), 0);
+});
+test("legacy days without pullups are untouched", () => {
+  assert.equal(pullupVolume(legacyDay), 0);
+  assert.equal(GRIP_ORDER.length, 3);
 });
 
 console.log(`\n${passed} tests passed${process.exitCode ? " (with failures)" : ""}`);

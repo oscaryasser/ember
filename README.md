@@ -16,6 +16,9 @@ when do I add weight.
   so it survives tab throttling.
 - **Strength** — A/B days with home/gym variants, per-set logging, "last time" hints,
   auto rest timer with +30s, custom exercises, live PR detection (Epley e1RM).
+- **Pull-up program** — separate grease-the-groove track: daily easy sets, grip rotation
+  (chin → neutral → wide), band/negative assists, prescriptions auto-scaled from a max
+  test every ~10 days, per-grip PR detection and progress charts.
 - **Coach** — weekly verdict (on pace / too fast / stalled) judged against *editable*
   goals, 14-day trends, streaks.
 - **Progress** — weight vs target, run pace, per-exercise e1RM charts, body measurements,
