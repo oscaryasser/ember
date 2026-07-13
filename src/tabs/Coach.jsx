@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Card, SectionLabel } from "../components/ui.jsx";
+import { Card, SectionLabel, StatTile } from "../components/ui.jsx";
 import { num, netOf, proteinOf } from "../lib/util.js";
 import { todayKey, keyOffset, shortDay } from "../lib/dates.js";
 import { coachVerdict, logStreak, fullWeekStreak } from "../lib/coach.js";
@@ -79,30 +79,14 @@ export default function Coach({ data }) {
 
       {/* week tiles */}
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-        <Card style={{ flex: "1 1 45%", minWidth: 140, textAlign: "center" }}>
-          <div className="display" style={{ fontSize: 32, fontWeight: 700, color: "var(--ember)" }}>
-            {v.weekStats.runs}<span style={{ fontSize: 18, color: "var(--dim)" }}>/{goals.weeklyRuns}</span>
-          </div>
-          <div style={{ fontSize: 13, color: "var(--dim)" }}>runs this week</div>
-        </Card>
-        <Card style={{ flex: "1 1 45%", minWidth: 140, textAlign: "center" }}>
-          <div className="display" style={{ fontSize: 32, fontWeight: 700, color: "var(--fuel)" }}>
-            {v.weekStats.strength}<span style={{ fontSize: 18, color: "var(--dim)" }}>/{goals.weeklyStrength}</span>
-          </div>
-          <div style={{ fontSize: 13, color: "var(--dim)" }}>strength this week</div>
-        </Card>
-        <Card style={{ flex: "1 1 45%", minWidth: 140, textAlign: "center" }}>
-          <div className="display" style={{ fontSize: 32, fontWeight: 700, color: v.weekStats.deficit >= 0 ? "var(--good)" : "var(--bad)" }}>
-            {v.weekStats.deficit >= 0 ? "−" : "+"}{Math.abs(Math.round(v.weekStats.deficit)).toLocaleString()}
-          </div>
-          <div style={{ fontSize: 13, color: "var(--dim)" }}>
-            week deficit · goal {(goals.deficit * 7).toLocaleString()} kcal ({v.weekStats.logged}d logged)
-          </div>
-        </Card>
-        <Card style={{ flex: "1 1 45%", minWidth: 140, textAlign: "center" }}>
-          <div className="display" style={{ fontSize: 32, fontWeight: 700 }}>{totalSessions}</div>
-          <div style={{ fontSize: 13, color: "var(--dim)" }}>total sessions logged</div>
-        </Card>
+        <StatTile valueColor="var(--ember)" sub="runs this week"
+          value={<>{v.weekStats.runs}<span style={{ fontSize: 18, color: "var(--dim)" }}>/{goals.weeklyRuns}</span></>} />
+        <StatTile valueColor="var(--fuel)" sub="strength this week"
+          value={<>{v.weekStats.strength}<span style={{ fontSize: 18, color: "var(--dim)" }}>/{goals.weeklyStrength}</span></>} />
+        <StatTile valueColor={v.weekStats.deficit >= 0 ? "var(--good)" : "var(--bad)"}
+          sub={`week deficit · goal ${(goals.deficit * Math.max(1, v.weekStats.logged)).toLocaleString()} kcal over ${v.weekStats.logged}d logged`}
+          value={`${v.weekStats.deficit >= 0 ? "−" : "+"}${Math.abs(Math.round(v.weekStats.deficit)).toLocaleString()}`} />
+        <StatTile sub="total sessions logged" value={totalSessions} />
       </div>
 
       <Card style={{ marginTop: 12 }}>
@@ -119,35 +103,25 @@ export default function Coach({ data }) {
 
       {/* 14-day trend tiles */}
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 12 }}>
-        <Card style={{ flex: "1 1 45%", minWidth: 140 }}>
-          <div className="display" style={{ fontSize: 26, fontWeight: 700, color: avgSteps === null ? "var(--dim)" : avgSteps >= goals.steps ? "var(--good)" : "var(--text)" }}>
-            {avgSteps === null ? "—" : Math.round(avgSteps).toLocaleString()}
-          </div>
-          <div style={{ fontSize: 12, color: "var(--dim)", marginBottom: 6 }}>avg steps / 7d · aim {(goals.steps / 1000).toFixed(0)}k+</div>
-          <Sparkline pts={spark("steps")} color="var(--c-fuel)" />
-        </Card>
-        <Card style={{ flex: "1 1 45%", minWidth: 140 }}>
-          <div className="display" style={{ fontSize: 26, fontWeight: 700, color: avgHours === null ? "var(--dim)" : avgHours >= goals.sleepHours ? "var(--good)" : "var(--ember)" }}>
-            {avgHours === null ? "—" : avgHours.toFixed(1) + "h"}
-            {avgScore !== null && <span style={{ fontSize: 15, color: "var(--dim)" }}> · {Math.round(avgScore)}</span>}
-          </div>
-          <div style={{ fontSize: 12, color: "var(--dim)", marginBottom: 6 }}>avg sleep / 7d · muscle is built here</div>
-          <Sparkline pts={spark("sleepHours")} color="var(--c-fuel)" />
-        </Card>
-        <Card style={{ flex: "1 1 45%", minWidth: 140 }}>
-          <div className="display" style={{ fontSize: 26, fontWeight: 700, color: v.avgProt === null ? "var(--dim)" : v.avgProt >= goals.protein - 10 ? "var(--good)" : "var(--ember)" }}>
-            {v.avgProt === null ? "—" : Math.round(v.avgProt) + "g"}
-          </div>
-          <div style={{ fontSize: 12, color: "var(--dim)", marginBottom: 6 }}>avg protein / 7d · goal {goals.protein}g</div>
-          <Sparkline pts={sparkProt} color="var(--c-ember)" />
-        </Card>
-        <Card style={{ flex: "1 1 45%", minWidth: 140 }}>
-          <div className="display" style={{ fontSize: 26, fontWeight: 700, color: "var(--text)" }}>
-            {v.lossRate === null ? "—" : `${v.lossRate >= 0 ? "−" : "+"}${Math.abs(v.lossRate).toFixed(1)}`}
-          </div>
-          <div style={{ fontSize: 12, color: "var(--dim)", marginBottom: 6 }}>lb/week · 7d avg vs previous 7d</div>
-          <Sparkline pts={spark("weight")} color="var(--c-ember)" />
-        </Card>
+        <StatTile size={26}
+          valueColor={avgSteps === null ? "var(--dim)" : avgSteps >= goals.steps ? "var(--good)" : "var(--text)"}
+          value={avgSteps === null ? "—" : Math.round(avgSteps).toLocaleString()}
+          sub={`avg steps / 7d · aim ${(goals.steps / 1000).toFixed(0)}k+`}
+          spark={<Sparkline pts={spark("steps")} color="var(--c-fuel)" />} />
+        <StatTile size={26}
+          valueColor={avgHours === null ? "var(--dim)" : avgHours >= goals.sleepHours ? "var(--good)" : "var(--ember)"}
+          value={<>{avgHours === null ? "—" : avgHours.toFixed(1) + "h"}{avgScore !== null && <span style={{ fontSize: 15, color: "var(--dim)" }}> · {Math.round(avgScore)}</span>}</>}
+          sub="avg sleep / 7d · muscle is built here"
+          spark={<Sparkline pts={spark("sleepHours")} color="var(--c-fuel)" />} />
+        <StatTile size={26}
+          valueColor={v.avgProt === null ? "var(--dim)" : v.avgProt >= goals.protein - 10 ? "var(--good)" : "var(--ember)"}
+          value={v.avgProt === null ? "—" : Math.round(v.avgProt) + "g"}
+          sub={`avg protein / 7d · goal ${goals.protein}g`}
+          spark={<Sparkline pts={sparkProt} color="var(--c-ember)" />} />
+        <StatTile size={26}
+          value={v.lossRate === null ? "—" : `${v.lossRate >= 0 ? "−" : "+"}${Math.abs(v.lossRate).toFixed(1)}`}
+          sub="lb/week · 7d avg vs previous 7d"
+          spark={<Sparkline pts={spark("weight")} color="var(--c-ember)" />} />
       </div>
     </div>
   );

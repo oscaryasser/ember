@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { kvGet, kvSet } from "./lib/idb.js";
 import { todayKey } from "./lib/dates.js";
+import { sanitizeDay } from "./lib/util.js";
 
 const KEY = "ember:data:v1";
 
@@ -18,18 +19,28 @@ export const DEFAULT_GOALS = {
   pullupTarget: 10,    // strict-rep goal on the max-test chart
 };
 
-export const EMPTY_DAY = {
+const emptyDay = () => ({
   activities: [], runWeek: null, checks: {},
   calIn: "", calActive: "", calResting: "", mins: "",
   protein: "", weight: "", steps: "", sleepScore: "", sleepHours: "",
-};
+});
+// Read-only fallback for days that don't exist yet. Deep-frozen so an
+// accidental mutation throws in dev instead of corrupting every empty day.
+export const EMPTY_DAY = Object.freeze({ ...emptyDay(), activities: Object.freeze([]), checks: Object.freeze({}) });
 
 function migrate(parsed) {
   const d = parsed && typeof parsed === "object" ? parsed : {};
+  const days = {};
+  if (d.days && typeof d.days === "object") {
+    for (const [k, v] of Object.entries(d.days)) {
+      const clean = sanitizeDay(v);
+      if (clean) days[k] = clean;
+    }
+  }
   return {
     version: 1,
     theme: d.theme === "light" ? "light" : "dark",
-    days: d.days && typeof d.days === "object" ? d.days : {},
+    days,
     runWeek: d.runWeek || 1,
     runAck: d.runAck || {},
     custom: d.custom || {},
@@ -37,16 +48,23 @@ function migrate(parsed) {
   };
 }
 
+const safeParse = (raw) => {
+  if (!raw || typeof raw !== "string") return null;
+  try {
+    const p = JSON.parse(raw);
+    return p && typeof p === "object" ? p : null;
+  } catch { return null; }
+};
+
+// Read BOTH stores and take the newer good copy. A corrupt or stale
+// localStorage (truncated write, quota failure) must never beat the mirror —
+// booting empty here would overwrite the mirror on the next save.
 async function loadInitial() {
-  let raw = null;
-  try { raw = localStorage.getItem(KEY); } catch { /* private mode etc. */ }
-  if (!raw) {
-    try { raw = await kvGet(KEY); } catch { /* no mirror */ }
-  }
-  let parsed = null;
-  if (raw) {
-    try { parsed = JSON.parse(raw); } catch { /* corrupt — start fresh, mirror kept */ }
-  }
+  let ls = null, mirror = null;
+  try { ls = safeParse(localStorage.getItem(KEY)); } catch { /* private mode etc. */ }
+  try { mirror = safeParse(await kvGet(KEY)); } catch { /* no mirror */ }
+  const parsed = !ls ? mirror : !mirror ? ls
+    : (mirror.savedAt || 0) > (ls.savedAt || 0) ? mirror : ls;
   return migrate(parsed);
 }
 
@@ -74,7 +92,8 @@ export function StoreProvider({ children }) {
     setSaveState("saving");
     clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
-      const json = JSON.stringify(data);
+      // savedAt lets loadInitial pick the newer copy when the two stores diverge.
+      const json = JSON.stringify({ ...data, savedAt: Date.now() });
       let ok = false;
       try {
         localStorage.setItem(KEY, json);
@@ -116,7 +135,7 @@ export const getDay = (data, key) => data.days[key] || EMPTY_DAY;
 export const patchDay = (update, key) => (patch) =>
   update((d) => ({
     ...d,
-    days: { ...d.days, [key]: { ...EMPTY_DAY, ...(d.days[key] || {}), ...patch } },
+    days: { ...d.days, [key]: { ...emptyDay(), ...(d.days[key] || {}), ...patch } },
   }));
 
 export { todayKey, KEY as STORAGE_KEY };

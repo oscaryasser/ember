@@ -38,3 +38,27 @@ export const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
 export const sanitizeDecimal = (v) => v.replace(/[^0-9.]/g, "");
 export const sanitizeInt = (v) => v.replace(/[^0-9]/g, "");
+
+// Coerce one day record into a renderable shape. Hand-edited backups and
+// interrupted writes are the inputs here — every field the UI dereferences
+// must come out safe, unknown fields must pass through untouched.
+export function sanitizeDay(d) {
+  if (!d || typeof d !== "object" || Array.isArray(d)) return null;
+  const out = { ...d };
+  out.activities = Array.isArray(d.activities) ? d.activities.filter((a) => typeof a === "string") : [];
+  out.checks = d.checks && typeof d.checks === "object" && !Array.isArray(d.checks) ? d.checks : {};
+  if (d.sets !== undefined && (typeof d.sets !== "object" || d.sets === null || Array.isArray(d.sets))) delete out.sets;
+  if (d.proteinEntries !== undefined) {
+    out.proteinEntries = (Array.isArray(d.proteinEntries) ? d.proteinEntries : [])
+      .map((v) => num(v))
+      .filter((v) => v !== null && v > 0);
+  }
+  if (d.measurements !== undefined && (typeof d.measurements !== "object" || d.measurements === null)) delete out.measurements;
+  if (d.pullups !== undefined) {
+    if (d.pullups && typeof d.pullups === "object" && !Array.isArray(d.pullups)) {
+      out.pullups = { ...d.pullups, sets: Array.isArray(d.pullups.sets) ? d.pullups.sets : [] };
+      if (out.pullups.test && typeof out.pullups.test !== "object") delete out.pullups.test;
+    } else delete out.pullups;
+  }
+  return out;
+}

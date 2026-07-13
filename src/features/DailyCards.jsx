@@ -103,7 +103,7 @@ export function ProteinCard({ day, setDay, goal }) {
               ) : null}
               {entries.map((g, i) => (
                 <div key={i} style={{ background: "var(--card2)", borderRadius: 8, padding: "5px 8px 5px 10px", fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}>
-                  {g}g <button onClick={() => removeEntry(i)} style={{ color: "var(--dim)", fontWeight: 700 }}>×</button>
+                  {g}g <button onClick={() => removeEntry(i)} aria-label={`Remove ${g}g entry`} style={{ color: "var(--dim)", fontWeight: 700 }}>×</button>
                 </div>
               ))}
             </div>

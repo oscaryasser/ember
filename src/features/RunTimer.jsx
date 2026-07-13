@@ -128,8 +128,8 @@ export default function RunTimer({ week, onComplete, onClose }) {
               <div className="section-label">Which run this week?</div>
               <div className="chips">
                 {rw.continuous.map((m, i) => (
-                  <button key={m} className="chip" onClick={() => setVariant(i)}
-                    style={variant === i ? { borderColor: "var(--ember)", background: "var(--ember)22", color: "var(--ember)" } : undefined}>
+                  <button key={m} className="chip" onClick={() => setVariant(i)} aria-pressed={variant === i}
+                    style={variant === i ? { borderColor: "var(--ember)", background: "color-mix(in srgb, var(--ember) 13%, transparent)", color: "var(--ember)" } : undefined}>
                     {m} min {i === 0 ? "(first run)" : "(second run)"}
                   </button>
                 ))}

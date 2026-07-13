@@ -117,6 +117,7 @@ export default function StrengthCard({ id, data, day, setDay, update, dateKey })
               </button>
               {isCustom && (
                 <button style={{ color: "var(--dim)", fontSize: 15, padding: "0 4px" }} title="Remove exercise"
+                  aria-label={`Remove ${exName}`}
                   onClick={() => removeCustom(i - STRENGTH[id][mode].length)}>×</button>
               )}
               <button
@@ -139,7 +140,7 @@ export default function StrengthCard({ id, data, day, setDay, update, dateKey })
                     {todaySets.map((s, si) => (
                       <div key={si} style={{ background: "var(--card2)", borderRadius: 8, padding: "4px 8px", fontSize: 13, display: "flex", gap: 6, alignItems: "center" }}>
                         {s.w ? `${s.w} × ${s.r}` : `${s.r} reps`}
-                        <button onClick={() => removeSet(si)} style={{ color: "var(--dim)", fontWeight: 700 }}>×</button>
+                        <button onClick={() => removeSet(si)} aria-label={`Remove set ${si + 1}`} style={{ color: "var(--dim)", fontWeight: 700 }}>×</button>
                       </div>
                     ))}
                   </div>

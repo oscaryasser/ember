@@ -2,7 +2,9 @@
 import assert from "node:assert/strict";
 import { buildRunSegments, totalSecs, RUN_WEEKS } from "../src/plan.js";
 import { normalizeImport, summarizeImport, mergeImport } from "../src/lib/importExport.js";
-import { num, netOf, proteinOf, e1rm } from "../src/lib/util.js";
+import { num, netOf, proteinOf, e1rm, sanitizeDay } from "../src/lib/util.js";
+import { weekStatsFor, coachVerdict, logStreak, fullWeekStreak } from "../src/lib/coach.js";
+import { todayKey, keyOffset, keyPlus, weekKeys } from "../src/lib/dates.js";
 import {
   suggestedGrip, prescription, workingMax, bestTestBefore, testDue,
   weekPullupDays, weekPullupReps, pullupVolume, GRIP_ORDER,
@@ -119,6 +121,131 @@ test("merge: imported days win, goals inherit targetWeight, custom union", () =>
   // legacy day content preserved verbatim
   assert.equal(proteinOf(m.days["2026-06-01"]), 125);
   assert.equal(m.days["2026-06-01"].sets.A["Leg press or goblet squat"].length, 2);
+});
+
+console.log("coach verdicts and streaks");
+// Goals mirror DEFAULT_GOALS (store.jsx is JSX and can't load in node).
+const GOALS = { protein: 160, deficit: 500, steps: 8000, sleepHours: 7, targetWeight: "", weeklyRuns: 2, weeklyStrength: 2, maxLossPct: 1.5, restSecs: 90, pullupDays: 5, pullupTarget: 10 };
+const deficitDay = (extra = {}) => ({ activities: [], checks: {}, calIn: "1700", calActive: "400", calResting: "1800", ...extra }); // −500 net
+// Weight windows and last-7 protein read relative to the REAL today, so those
+// fixtures are built with keyOffset; session weeks use a fixed Monday week.
+const fixedWeek = weekKeys("2026-06-03"); // any stable Mon–Sun
+const weightsAround = (nowLbs, prevLbs) => {
+  const days = {};
+  for (let i = 0; i <= 6; i++) days[keyOffset(-i)] = { weight: String(nowLbs) };
+  for (let i = 7; i <= 13; i++) days[keyOffset(-i)] = { weight: String(prevLbs) };
+  return days;
+};
+
+test("weekStatsFor counts runs, strength, deficit, logged in the Monday week", () => {
+  const days = {};
+  days[fixedWeek[0]] = deficitDay({ activities: ["run"] });
+  days[fixedWeek[1]] = deficitDay({ activities: ["A"] });
+  days[fixedWeek[3]] = deficitDay({ activities: ["B", "run"] });
+  days[fixedWeek[5]] = deficitDay();
+  days[keyPlus(fixedWeek[0], -1)] = deficitDay({ activities: ["run"] }); // previous week — excluded
+  const s = weekStatsFor({ days }, fixedWeek[2]);
+  assert.deepEqual(s, { runs: 2, strength: 2, deficit: 2000, logged: 4 });
+});
+
+test("verdict: losing too fast → bad, tells you to eat more", () => {
+  const v = coachVerdict({ days: weightsAround(200, 205), goals: GOALS }, todayKey());
+  assert.equal(v.tone, "bad");
+  assert.match(v.headline, /too fast/);
+});
+
+test("verdict: real deficit but flat scale → stall warning", () => {
+  const days = weightsAround(210, 210);
+  // 4 logged deficit days + sessions in the current Monday week (today is always in it)
+  const wk = weekKeys(todayKey());
+  for (let i = 0; i < 4; i++) days[wk[i]] = { ...deficitDay(), ...(days[wk[i]] || {}), ...deficitDay() };
+  const v = coachVerdict({ days, goals: GOALS }, todayKey());
+  assert.equal(v.tone, "warn");
+  assert.match(v.headline, /Scale flat/);
+});
+
+test("verdict: sessions + deficit + sane loss rate → on pace", () => {
+  const days = weightsAround(209, 210);
+  const wk = weekKeys(todayKey());
+  days[wk[0]] = { ...(days[wk[0]] || {}), ...deficitDay({ activities: ["run", "A"] }) };
+  days[wk[1]] = { ...(days[wk[1]] || {}), ...deficitDay({ activities: ["run", "B"] }) };
+  days[wk[2]] = { ...(days[wk[2]] || {}), ...deficitDay() };
+  days[wk[3]] = { ...(days[wk[3]] || {}), ...deficitDay() };
+  const v = coachVerdict({ days, goals: GOALS }, todayKey());
+  assert.equal(v.tone, "good");
+  assert.match(v.headline, /On pace/);
+});
+
+test("verdict: empty log → not enough data", () => {
+  const v = coachVerdict({ days: {}, goals: GOALS }, todayKey());
+  assert.equal(v.tone, "dim");
+});
+
+test("verdict lines are judged against editable goals", () => {
+  const days = {};
+  for (let i = 0; i <= 6; i++) days[keyOffset(-i)] = { proteinEntries: [175] }; // ok has a 10g tolerance
+  const v160 = coachVerdict({ days, goals: GOALS }, todayKey());
+  const v190 = coachVerdict({ days, goals: { ...GOALS, protein: 190 } }, todayKey());
+  const line = (v) => v.lines.find((l) => l.txt.startsWith("Protein"));
+  assert.equal(line(v160).ok, true);
+  assert.equal(line(v190).ok, false);
+  assert.match(line(v190).txt, /goal 190\+/);
+  assert.match(v190.lines[4].txt, /Pull-ups: 0\/5 days|not started/);
+});
+
+test("logStreak: counts back from today, unlogged today doesn't break it", () => {
+  assert.equal(logStreak({ days: {} }), 0);
+  const logged = { weight: "210" };
+  const d3 = { days: { [keyOffset(0)]: logged, [keyOffset(-1)]: logged, [keyOffset(-2)]: logged } };
+  assert.equal(logStreak(d3), 3);
+  const graced = { days: { [keyOffset(-1)]: logged, [keyOffset(-2)]: logged } };
+  assert.equal(logStreak(graced), 2);
+  const gapped = { days: { [keyOffset(0)]: logged, [keyOffset(-2)]: logged } };
+  assert.equal(logStreak(gapped), 1);
+});
+
+test("fullWeekStreak: consecutive completed 2+2 weeks before this one", () => {
+  const days = {};
+  const mon = weekKeys(todayKey())[0];
+  for (const back of [7, 14]) {
+    const m = keyPlus(mon, -back);
+    days[m] = { activities: ["run", "A"] };
+    days[keyPlus(m, 2)] = { activities: ["run", "B"] };
+  }
+  assert.equal(fullWeekStreak({ days, goals: GOALS }, todayKey()), 2);
+  delete days[keyPlus(mon, -14)];
+  assert.equal(fullWeekStreak({ days, goals: GOALS }, todayKey()), 1);
+});
+
+console.log("day sanitization");
+test("sanitizeDay repairs malformed fields and keeps unknown ones", () => {
+  const dirty = {
+    activities: "run", checks: [], weight: "212",
+    proteinEntries: ["40", "junk", 30, -5],
+    pullups: { sets: "nope", test: { grip: "chin", reps: 4 } },
+    futureField: { keep: true },
+  };
+  const clean = sanitizeDay(dirty);
+  assert.deepEqual(clean.activities, []);
+  assert.deepEqual(clean.checks, {});
+  assert.deepEqual(clean.proteinEntries, [40, 30]);
+  assert.deepEqual(clean.pullups.sets, []);
+  assert.equal(clean.pullups.test.reps, 4);
+  assert.equal(clean.weight, "212");
+  assert.deepEqual(clean.futureField, { keep: true });
+  assert.equal(sanitizeDay(null), null);
+  assert.equal(sanitizeDay([1, 2]), null);
+});
+
+test("mergeImport sanitizes hostile days instead of importing them verbatim", () => {
+  const hostile = { days: { "2026-05-01": { activities: null, weight: "215" }, "2026-05-02": "garbage" } };
+  const m = mergeImport({ days: {}, runWeek: 1, runAck: {}, custom: {}, goals: GOALS }, hostile);
+  assert.deepEqual(m.days["2026-05-01"].activities, []);
+  assert.equal(m.days["2026-05-01"].weight, "215");
+  assert.equal(m.days["2026-05-02"], undefined);
+  // the repaired day renders: these are the exact calls Today makes
+  assert.equal(m.days["2026-05-01"].activities.includes("run"), false);
+  assert.equal(proteinOf(m.days["2026-05-01"]), 0);
 });
 
 console.log("pull-up program");

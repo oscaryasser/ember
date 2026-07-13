@@ -59,6 +59,23 @@ export default function Photos() {
   const a = photos?.find((p) => p.id === selA);
   const b = photos?.find((p) => p.id === selB);
 
+  // Photos aren't in the JSON backup, so give each one an exit: share sheet
+  // (saves to camera roll on iOS) with a plain download as the fallback.
+  const savePhotoOut = async (p) => {
+    const file = new File([p.blob], `ember-${p.date}.jpg`, { type: p.blob.type || "image/jpeg" });
+    if (navigator.canShare?.({ files: [file] })) {
+      try { await navigator.share({ files: [file] }); return; } catch { /* cancelled → fall through */ }
+    }
+    const url = URL.createObjectURL(p.blob);
+    const el = document.createElement("a");
+    el.href = url;
+    el.download = file.name;
+    document.body.appendChild(el);
+    el.click();
+    el.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+  };
+
   return (
     <Card style={{ marginTop: 12 }}>
       <div className="row" style={{ justifyContent: "space-between" }}>
@@ -83,9 +100,12 @@ export default function Photos() {
       {!!(a || b) && !(a && b) && (
         <div className="row" style={{ marginBottom: 10, gap: 8 }}>
           <div className="grow" style={{ fontSize: 12, color: "var(--dim)" }}>Tap a second photo to compare side by side.</div>
+          <button className="btn" style={{ fontSize: 12, padding: "6px 10px" }} onClick={() => savePhotoOut(a || b)}>
+            ⬇ Save
+          </button>
           <button className="btn" style={{ fontSize: 12, color: "var(--bad)", padding: "6px 10px" }}
             onClick={() => remove((a || b).id)}>
-            Delete selected
+            Delete
           </button>
         </div>
       )}

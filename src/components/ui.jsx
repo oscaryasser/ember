@@ -26,7 +26,8 @@ export const Chip = ({ active, color, children, onClick }) => (
   <button
     className="chip"
     onClick={onClick}
-    style={active ? { borderColor: color, background: color + "22", color } : undefined}
+    aria-pressed={!!active}
+    style={active ? { borderColor: color, background: `color-mix(in srgb, ${color} 13%, transparent)`, color } : undefined}
   >
     {children}
   </button>
@@ -44,6 +45,15 @@ export const Check = ({ on }) => (
   >
     {on ? "✓" : ""}
   </div>
+);
+
+// Dashboard stat tile: big number, dim caption, optional sparkline below.
+export const StatTile = ({ value, valueColor = "var(--text)", sub, size = 32, spark }) => (
+  <Card style={{ flex: "1 1 45%", minWidth: 140, textAlign: spark ? "left" : "center" }}>
+    <div className="display" style={{ fontSize: size, fontWeight: 700, color: valueColor }}>{value}</div>
+    <div style={{ fontSize: spark ? 12 : 13, color: "var(--dim)", marginBottom: spark ? 6 : 0 }}>{sub}</div>
+    {spark}
+  </Card>
 );
 
 export const Seg = ({ options, value, onChange, activeColor = "var(--ember)" }) => (

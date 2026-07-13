@@ -131,7 +131,7 @@ export default function PullupCard({ data, day, setDay, dateKey, goals }) {
               {sets.map((s, i) => (
                 <div key={i} style={{ background: "var(--card2)", borderRadius: 8, padding: "4px 8px", fontSize: 13, display: "flex", gap: 6, alignItems: "center" }}>
                   {s.reps} {GRIPS[s.grip]?.short.toLowerCase() || s.grip}{s.assist === "band" ? " (band)" : s.assist === "neg" ? " (neg)" : ""}
-                  <button onClick={() => removeSet(i)} style={{ color: "var(--dim)", fontWeight: 700 }}>×</button>
+                  <button onClick={() => removeSet(i)} aria-label={`Remove set ${i + 1}`} style={{ color: "var(--dim)", fontWeight: 700 }}>×</button>
                 </div>
               ))}
             </div>

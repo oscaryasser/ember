@@ -84,9 +84,7 @@ export function coachVerdict(data, dateKey) {
 // Consecutive days with any log, ending today (a not-yet-logged today doesn't break it).
 export function logStreak(data) {
   let streak = 0;
-  let i = hasAnyLog(data.days[keyOffset(0)]) ? 0 : -1;
-  if (i === -1 && !hasAnyLog(data.days[keyOffset(-1)])) return 0;
-  for (let d = i === 0 ? 0 : 1; d < 3650; d++) {
+  for (let d = hasAnyLog(data.days[keyOffset(0)]) ? 0 : 1; d < 3650; d++) {
     if (hasAnyLog(data.days[keyOffset(-d)])) streak++;
     else break;
   }

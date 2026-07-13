@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Card, SectionLabel, Chip } from "../components/ui.jsx";
 import { num, netOf, sanitizeDecimal } from "../lib/util.js";
 import { todayKey, keyOffset, shortDay, niceDate } from "../lib/dates.js";
@@ -11,6 +11,27 @@ import PullupCard from "../features/PullupCard.jsx";
 
 export default function Today({ data, update, goTo }) {
   const [dateKey, setDateKey] = useState(todayKey());
+
+  // iOS resumes installed PWAs from memory days later — without this, the
+  // morning weigh-in silently lands on yesterday's date.
+  const knownToday = useRef(todayKey());
+  useEffect(() => {
+    const onWake = () => {
+      if (document.visibilityState === "hidden") return;
+      const t = todayKey();
+      if (t !== knownToday.current) {
+        setDateKey((k) => (k === knownToday.current ? t : k)); // only follow if user was on "today"
+        knownToday.current = t;
+      }
+    };
+    document.addEventListener("visibilitychange", onWake);
+    window.addEventListener("focus", onWake);
+    return () => {
+      document.removeEventListener("visibilitychange", onWake);
+      window.removeEventListener("focus", onWake);
+    };
+  }, []);
+
   const day = getDay(data, dateKey);
   const setDay = patchDay(update, dateKey);
   const goals = data.goals;
@@ -86,6 +107,7 @@ export default function Today({ data, update, goTo }) {
           const hasLog = dd && ((dd.activities || []).length || netOf(dd) !== null);
           return (
             <button key={k} onClick={() => setDateKey(k)}
+              aria-pressed={active} aria-label={niceDate(k)}
               style={{
                 minWidth: 46, textAlign: "center", padding: "8px 4px", borderRadius: 12,
                 background: active ? "var(--ember)" : "var(--card)",

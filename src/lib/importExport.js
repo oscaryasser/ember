@@ -1,5 +1,5 @@
 import { todayKey } from "./dates.js";
-import { hasAnyLog } from "./util.js";
+import { hasAnyLog, sanitizeDay } from "./util.js";
 
 // Accepts every plausible export shape from the old artifact or from Ember:
 //   1. Raw data object:                  { days: {...}, runWeek, custom, ... }
@@ -47,11 +47,17 @@ export function summarizeImport(imported) {
   };
 }
 
-// Imported data wins per-day; settings come along when present.
+// Imported data wins per-day; settings come along when present. Every
+// imported day is sanitized — one malformed record must never brick a render.
 export function mergeImport(current, imported) {
+  const cleanDays = {};
+  for (const [k, v] of Object.entries(imported.days)) {
+    const clean = sanitizeDay(v);
+    if (clean) cleanDays[k] = clean;
+  }
   const merged = {
     ...current,
-    days: { ...current.days, ...imported.days },
+    days: { ...current.days, ...cleanDays },
   };
   if (imported.runWeek) merged.runWeek = imported.runWeek;
   if (imported.runAck) merged.runAck = { ...current.runAck, ...imported.runAck };

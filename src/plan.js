@@ -17,6 +17,10 @@ export const RUN_WEEKS = {
 export const WARMUP_SECS = 300;
 export const COOLDOWN_SECS = 300;
 
+// ⚠ Exercise history is keyed by the text BEFORE the "—" in each label below
+// (see StrengthCard's exName). Renaming that part orphans every logged set
+// for the exercise. Reword the rep scheme freely; don't touch the name part.
+
 // Build the full guided-timer segment list for a run week.
 // `variant` picks among `continuous` options (index), ignored otherwise.
 export function buildRunSegments(week, variant = 0) {
