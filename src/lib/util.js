@@ -39,6 +39,20 @@ export const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 export const sanitizeDecimal = (v) => v.replace(/[^0-9.]/g, "");
 export const sanitizeInt = (v) => v.replace(/[^0-9]/g, "");
 
+// Parse a stored snapshot; anything unreadable or non-object counts as absent.
+export const safeParse = (raw) => {
+  if (!raw || typeof raw !== "string") return null;
+  try {
+    const p = JSON.parse(raw);
+    return p && typeof p === "object" ? p : null;
+  } catch { return null; }
+};
+
+// Choose between the two persisted snapshots (localStorage vs IDB mirror):
+// a missing/corrupt copy loses, otherwise the newer savedAt wins.
+export const pickFresher = (a, b) =>
+  !a ? b || null : !b ? a : (b.savedAt || 0) > (a.savedAt || 0) ? b : a;
+
 // Coerce one day record into a renderable shape. Hand-edited backups and
 // interrupted writes are the inputs here — every field the UI dereferences
 // must come out safe, unknown fields must pass through untouched.

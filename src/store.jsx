@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { kvGet, kvSet } from "./lib/idb.js";
 import { todayKey } from "./lib/dates.js";
-import { sanitizeDay } from "./lib/util.js";
+import { sanitizeDay, safeParse, pickFresher } from "./lib/util.js";
 
 const KEY = "ember:data:v1";
 
@@ -48,14 +48,6 @@ function migrate(parsed) {
   };
 }
 
-const safeParse = (raw) => {
-  if (!raw || typeof raw !== "string") return null;
-  try {
-    const p = JSON.parse(raw);
-    return p && typeof p === "object" ? p : null;
-  } catch { return null; }
-};
-
 // Read BOTH stores and take the newer good copy. A corrupt or stale
 // localStorage (truncated write, quota failure) must never beat the mirror —
 // booting empty here would overwrite the mirror on the next save.
@@ -63,9 +55,7 @@ async function loadInitial() {
   let ls = null, mirror = null;
   try { ls = safeParse(localStorage.getItem(KEY)); } catch { /* private mode etc. */ }
   try { mirror = safeParse(await kvGet(KEY)); } catch { /* no mirror */ }
-  const parsed = !ls ? mirror : !mirror ? ls
-    : (mirror.savedAt || 0) > (ls.savedAt || 0) ? mirror : ls;
-  return migrate(parsed);
+  return migrate(pickFresher(ls, mirror));
 }
 
 const StoreCtx = createContext(null);

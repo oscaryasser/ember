@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import { buildRunSegments, totalSecs, RUN_WEEKS } from "../src/plan.js";
 import { normalizeImport, summarizeImport, mergeImport } from "../src/lib/importExport.js";
-import { num, netOf, proteinOf, e1rm, sanitizeDay } from "../src/lib/util.js";
+import { num, netOf, proteinOf, e1rm, sanitizeDay, safeParse, pickFresher } from "../src/lib/util.js";
 import { weekStatsFor, coachVerdict, logStreak, fullWeekStreak } from "../src/lib/coach.js";
 import { todayKey, keyOffset, keyPlus, weekKeys } from "../src/lib/dates.js";
 import {
@@ -215,6 +215,28 @@ test("fullWeekStreak: consecutive completed 2+2 weeks before this one", () => {
   assert.equal(fullWeekStreak({ days, goals: GOALS }, todayKey()), 2);
   delete days[keyPlus(mon, -14)];
   assert.equal(fullWeekStreak({ days, goals: GOALS }, todayKey()), 1);
+});
+
+console.log("dual-store rescue path");
+test("safeParse: corrupt, empty, and non-object inputs count as absent", () => {
+  assert.equal(safeParse('{"days":{}'), null);       // truncated write
+  assert.equal(safeParse(""), null);
+  assert.equal(safeParse(null), null);
+  assert.equal(safeParse('"just a string"'), null);
+  assert.deepEqual(safeParse('{"days":{}}'), { days: {} });
+});
+test("pickFresher: corrupt localStorage never beats the mirror", () => {
+  const mirror = { days: { a: 1 }, savedAt: 100 };
+  assert.equal(pickFresher(null, mirror), mirror);   // the exact data-loss scenario
+  assert.equal(pickFresher(mirror, null), mirror);
+  assert.equal(pickFresher(null, null), null);
+});
+test("pickFresher: newer savedAt wins, ties and legacy copies keep localStorage", () => {
+  const older = { savedAt: 100 }, newer = { savedAt: 200 }, unstamped = {};
+  assert.equal(pickFresher(older, newer), newer);
+  assert.equal(pickFresher(newer, older), newer);
+  assert.equal(pickFresher(older, older), older);
+  assert.equal(pickFresher(unstamped, unstamped), unstamped);
 });
 
 console.log("day sanitization");
