@@ -41,6 +41,20 @@ export default function AdaptiveTargets({ data, update }) {
           and sets your calorie target from it — no formulas, no trusting the watch.
           <br /><b style={{ color: "var(--text)" }}>Still needed:</b> {est.reason}.
         </div>
+        {targets.kcal !== null && targets.source === "garmin" && (
+          <div style={{ marginTop: 10, padding: "10px 12px", borderRadius: 12, background: "color-mix(in srgb, var(--fuel) 7%, transparent)", border: "1px solid color-mix(in srgb, var(--fuel) 30%, var(--line))" }}>
+            <div style={{ fontSize: 14, fontWeight: 800 }}>
+              Meanwhile: eat ~{targets.kcal.toLocaleString()} kcal/day
+              <span style={{ color: "var(--dim)", fontWeight: 600 }}> (Garmin burn {targets.garmin.toLocaleString()} − {data.goals.deficit})</span>
+            </div>
+            <div style={{ fontSize: 13, marginTop: 4 }}>
+              Protein <b>{targets.protein}g</b> · Fat <b>{targets.fat}g</b> · Carbs <b>{targets.carbs}g</b>
+            </div>
+            <div style={{ fontSize: 11, color: "var(--dim)", marginTop: 4 }}>
+              Provisional — the measured number replaces it automatically once there's enough data.
+            </div>
+          </div>
+        )}
       </Card>
     );
   }

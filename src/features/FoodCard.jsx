@@ -153,7 +153,8 @@ export default function FoodCard({ data, day, setDay, update }) {
             </div>
             {targets.kcal !== null && (
               <div style={{ fontSize: 13, fontWeight: 700, color: intake !== null && intake > targets.kcal ? "var(--bad)" : "var(--dim)" }}>
-                target ~{targets.kcal.toLocaleString()}{targets.kcalAuto ? " (auto)" : ""}
+                target ~{targets.kcal.toLocaleString()}
+                {targets.source === "garmin" ? " (Garmin est.)" : targets.source === "measured" ? " (measured)" : ""}
               </div>
             )}
           </div>

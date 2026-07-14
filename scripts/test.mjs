@@ -297,8 +297,34 @@ test("resolveTargets: manual goals always win over adaptive", () => {
   assert.equal(t.kcal, 2200);
   assert.equal(t.fat, 80);
   assert.equal(t.kcalAuto, false);
+  assert.equal(t.source, "manual");
   const cold = resolveTargets({ days: {}, goals: { ...GOALS, calTarget: "2200" } });
   assert.equal(cold.kcal, 2200); // manual target works with zero history
+});
+
+test("resolveTargets: Garmin burn is the provisional fallback before TDEE is measurable", () => {
+  const days = {};
+  for (let i = 0; i < 5; i++) days[keyOffset(-i)] = { calActive: "400", calResting: "1800" }; // burn 2200, no weigh-ins
+  const t = resolveTargets({ days, goals: GOALS });
+  assert.equal(t.source, "garmin");
+  assert.equal(t.kcal, 1700); // 2200 − 500
+  assert.equal(t.fat, 55);    // 30% of 1700 / 9 → 56.7 → nearest 5
+  assert.equal(t.carbs, 140); // (1700 − 160×4 − 55×9) / 4 = 141.25 → nearest 5
+});
+
+test("resolveTargets: measured TDEE beats the Garmin provisional", () => {
+  const days = adaptiveDays();
+  for (const k of Object.keys(days)) days[k] = { ...days[k], calActive: "500", calResting: "2500" }; // Garmin claims 3000
+  const t = resolveTargets({ days, goals: GOALS });
+  assert.equal(t.source, "measured");
+  assert.equal(t.kcal, 1850); // from measured 2350, not Garmin's 3000
+});
+
+test("resolveTargets: nothing to go on → null targets, protein still set", () => {
+  const t = resolveTargets({ days: {}, goals: GOALS });
+  assert.equal(t.kcal, null);
+  assert.equal(t.source, null);
+  assert.equal(t.protein, 160);
 });
 
 console.log("dual-store rescue path");

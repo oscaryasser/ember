@@ -60,7 +60,7 @@ export default function Plan({ data }) {
           gets trained and nothing gets overused. Strength grows from frequency, not from grinding.
         </div>
         {[
-          ["Test day", "No max on file (or 10+ days old): one honest max set of strict chin-ups. Zero is a valid score — it just picks your level."],
+          ["Test day", "No max on file (or 10+ days old): one honest max set of strict chin-ups, replacing that day's easy sets. Zero is a valid score — it just picks your level."],
           ["Foundation — max 0", "5 × 3 slow negatives (jump up, 5 s down) or 5 × 5 band-assisted reps."],
           ["Groove — max 1–3", "6 easy sets of half your max (min 1), spread through the day."],
           ["Volume — max 4–7", "5 easy sets of ~50% of max — always crisp."],

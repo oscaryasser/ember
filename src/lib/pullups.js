@@ -65,8 +65,8 @@ export function prescription(max) {
   if (max === null || max === undefined) {
     return {
       level: "Test day", sets: 1, reps: null,
-      scheme: "One honest max set of strict chin-ups — 0 is a valid score",
-      why: "Everything scales from your tested max. Retest every " + TEST_EVERY_DAYS + " days.",
+      scheme: "One honest max set of strict chin-ups — instead of easy sets today (0 is a valid score)",
+      why: "The test replaces that day's easy sets, never adds to them. Everything scales from this number; retest every " + TEST_EVERY_DAYS + " days.",
     };
   }
   if (max <= 0) {

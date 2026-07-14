@@ -146,16 +146,23 @@ export default function PullupCard({ data, day, setDay, dateKey, goals }) {
           {/* max test */}
           <div style={{ marginTop: 12, paddingTop: 10, borderTop: "1px solid var(--line)" }}>
             {!testOpen ? (
-              <button className="btn" style={{ width: "100%", ...(anyTestDue ? { borderColor: "var(--ember)", color: "var(--ember)", fontWeight: 800 } : {}) }}
-                onClick={() => { setTestGrip(grip); setTestOpen(true); }}>
-                {anyTestDue ? "⏱ Max test due — log today's max" : "Log a max test"}
-                {!anyTestDue && daysSinceTest(data, grip, dateKey) !== null &&
-                  ` (${GRIPS[grip].short.toLowerCase()} retest in ${Math.max(0, TEST_EVERY_DAYS - daysSinceTest(data, grip, dateKey))}d)`}
-              </button>
+              <>
+                <button className="btn" style={{ width: "100%", ...(anyTestDue && sets.length === 0 ? { borderColor: "var(--ember)", color: "var(--ember)", fontWeight: 800 } : {}) }}
+                  onClick={() => { setTestGrip(grip); setTestOpen(true); }}>
+                  {!wm ? "Set your level — log one honest max set"
+                    : anyTestDue ? (sets.length ? "⏱ Retest due — next fresh day" : "⏱ Max test due — log today's max")
+                    : "Log a max test"}
+                  {!anyTestDue && daysSinceTest(data, grip, dateKey) !== null &&
+                    ` (${GRIPS[grip].short.toLowerCase()} retest in ${Math.max(0, TEST_EVERY_DAYS - daysSinceTest(data, grip, dateKey))}d)`}
+                </button>
+                <div style={{ fontSize: 11, color: "var(--dim)", marginTop: 5 }}>
+                  The test <b>replaces</b> that day's easy sets — never do both. Already did your sets today? It waits.
+                </div>
+              </>
             ) : (
               <div>
                 <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8 }}>
-                  Fresh day, full rest, one honest max set — stop when form breaks.
+                  One honest max set <span style={{ color: "var(--ember)" }}>instead of</span> today's easy sets — fresh, full rest, stop when form breaks.
                 </div>
                 <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
                   <Seg options={GRIP_ORDER.map((g) => [g, GRIPS[g].short])} value={testGrip || grip} onChange={setTestGrip} />
