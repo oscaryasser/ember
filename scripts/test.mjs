@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import { buildRunSegments, totalSecs, RUN_WEEKS } from "../src/plan.js";
 import { normalizeImport, summarizeImport, mergeImport } from "../src/lib/importExport.js";
-import { num, netOf, proteinOf, e1rm, sanitizeDay, safeParse, pickFresher, intakeOf, mealTotals } from "../src/lib/util.js";
+import { num, netOf, proteinOf, e1rm, sanitizeDay, safeParse, pickFresher, intakeOf, mealTotals, sleepTotalOf } from "../src/lib/util.js";
 import { estimateTDEE, resolveTargets, weightSlope, kcalFromMacros } from "../src/lib/adaptive.js";
 import { weekStatsFor, coachVerdict, logStreak, fullWeekStreak } from "../src/lib/coach.js";
 import { todayKey, keyOffset, keyPlus, weekKeys } from "../src/lib/dates.js";
@@ -64,6 +64,13 @@ test("netOf matches legacy formula", () => assert.equal(netOf(legacyDay), 1950 -
 test("proteinOf sums legacy field + entries", () => assert.equal(proteinOf(legacyDay), 35 + 90));
 test("num handles blanks", () => { assert.equal(num(""), null); assert.equal(num("12.5"), 12.5); });
 test("e1rm epley", () => assert.equal(e1rm(180, 12), 180 * (1 + 12 / 30)));
+test("sleepTotalOf sums overnight + naps, null when neither", () => {
+  assert.equal(sleepTotalOf({ sleepHours: "6.5", napHours: "1.5" }), 8);
+  assert.equal(sleepTotalOf({ sleepHours: "7" }), 7);
+  assert.equal(sleepTotalOf({ napHours: "0.5" }), 0.5); // nap-only day still counts
+  assert.equal(sleepTotalOf({ sleepHours: "", napHours: "" }), null);
+  assert.equal(sleepTotalOf(undefined), null);
+});
 
 console.log("import normalizer — every plausible wrapper");
 const legacyData = {

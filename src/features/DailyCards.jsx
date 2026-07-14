@@ -26,7 +26,8 @@ export function GarminCard({ day, setDay }) {
           <Field label="Workout time" unit="min" value={day.mins} onChange={(v) => setDay({ mins: v })} />
           <Field label="Steps" unit="from Garmin" value={day.steps} onChange={(v) => setDay({ steps: v })} />
           <Field label="Sleep score" unit="0–100" value={day.sleepScore} onChange={(v) => setDay({ sleepScore: v })} />
-          <Field label="Sleep time" unit="hours" value={day.sleepHours} onChange={(v) => setDay({ sleepHours: v })} />
+          <Field label="Sleep time" unit="hours · overnight" value={day.sleepHours} onChange={(v) => setDay({ sleepHours: v })} />
+          <Field label="Nap time" unit="hours · adds to sleep" value={day.napHours || ""} onChange={(v) => setDay({ napHours: v })} />
         </div>
       )}
     </Card>

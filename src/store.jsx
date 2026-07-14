@@ -25,7 +25,7 @@ export const DEFAULT_GOALS = {
 const emptyDay = () => ({
   activities: [], runWeek: null, checks: {},
   calIn: "", calActive: "", calResting: "", mins: "",
-  protein: "", weight: "", steps: "", sleepScore: "", sleepHours: "",
+  protein: "", weight: "", steps: "", sleepScore: "", sleepHours: "", napHours: "",
 });
 // Read-only fallback for days that don't exist yet. Deep-frozen so an
 // accidental mutation throws in dev instead of corrupting every empty day.

@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { Card, SectionLabel, StatTile } from "../components/ui.jsx";
-import { num, netOf, proteinOf } from "../lib/util.js";
+import { num, netOf, proteinOf, sleepTotalOf } from "../lib/util.js";
 import { todayKey, keyOffset, shortDay } from "../lib/dates.js";
 import { coachVerdict, logStreak, fullWeekStreak } from "../lib/coach.js";
 import { BalanceBars, Sparkline } from "../components/charts.jsx";
@@ -35,8 +35,9 @@ export default function Coach({ data }) {
   };
   const last7 = last14.slice(-7);
   const avgSteps = avg(last7.map((d) => (d.day ? num(d.day.steps) : null)));
-  const avgHours = avg(last7.map((d) => (d.day ? num(d.day.sleepHours) : null)));
+  const avgHours = avg(last7.map((d) => sleepTotalOf(d.day)));
   const avgScore = avg(last7.map((d) => (d.day ? num(d.day.sleepScore) : null)));
+  const anyNaps = last7.some((d) => d.day && num(d.day.napHours) !== null);
 
   const streakDays = useMemo(() => logStreak(data), [data]);
   const streakWeeks = useMemo(() => fullWeekStreak(data, dateKey), [data, dateKey]);
@@ -114,8 +115,8 @@ export default function Coach({ data }) {
         <StatTile size={26}
           valueColor={avgHours === null ? "var(--dim)" : avgHours >= goals.sleepHours ? "var(--good)" : "var(--ember)"}
           value={<>{avgHours === null ? "—" : avgHours.toFixed(1) + "h"}{avgScore !== null && <span style={{ fontSize: 15, color: "var(--dim)" }}> · {Math.round(avgScore)}</span>}</>}
-          sub="avg sleep / 7d · muscle is built here"
-          spark={<Sparkline pts={spark("sleepHours")} color="var(--c-fuel)" />} />
+          sub={`avg sleep / 7d${anyNaps ? " incl. naps" : ""} · muscle is built here`}
+          spark={<Sparkline pts={last14.map((d) => sleepTotalOf(d.day))} color="var(--c-fuel)" />} />
         <StatTile size={26}
           valueColor={v.avgProt === null ? "var(--dim)" : v.avgProt >= goals.protein - 10 ? "var(--good)" : "var(--ember)"}
           value={v.avgProt === null ? "—" : Math.round(v.avgProt) + "g"}

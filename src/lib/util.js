@@ -45,6 +45,15 @@ export const proteinOf = (d) => {
   return legacy + (d.proteinEntries || []).reduce((a, b) => a + b, 0) + mealTotals(d).p;
 };
 
+// Total sleep for a day: overnight + naps. Null until either is logged.
+export const sleepTotalOf = (d) => {
+  if (!d) return null;
+  const night = num(d.sleepHours);
+  const nap = num(d.napHours);
+  if (night === null && nap === null) return null;
+  return (night || 0) + (nap || 0);
+};
+
 export const hasAnyLog = (d) =>
   !!d &&
   ((d.activities || []).length > 0 ||
@@ -53,7 +62,7 @@ export const hasAnyLog = (d) =>
     proteinOf(d) > 0 ||
     mealsOf(d).length > 0 ||
     num(d.steps) !== null ||
-    num(d.sleepHours) !== null);
+    sleepTotalOf(d) !== null);
 
 // Epley estimated 1RM. Bodyweight-only sets (w=0) have no meaningful e1RM.
 export const e1rm = (w, r) => (w > 0 && r > 0 ? w * (1 + r / 30) : 0);
