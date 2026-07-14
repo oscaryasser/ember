@@ -4,7 +4,7 @@ import { buildRunSegments, totalSecs, RUN_WEEKS } from "../src/plan.js";
 import { normalizeImport, summarizeImport, mergeImport } from "../src/lib/importExport.js";
 import { num, netOf, proteinOf, e1rm, sanitizeDay, safeParse, pickFresher, intakeOf, mealTotals, sleepTotalOf } from "../src/lib/util.js";
 import { estimateTDEE, resolveTargets, weightSlope, kcalFromMacros } from "../src/lib/adaptive.js";
-import { weekStatsFor, coachVerdict, logStreak, fullWeekStreak } from "../src/lib/coach.js";
+import { weekStatsFor, coachVerdict, logStreak, fullWeekStreak, suggestTraining, heatLevel } from "../src/lib/coach.js";
 import { todayKey, keyOffset, keyPlus, weekKeys } from "../src/lib/dates.js";
 import {
   suggestedGrip, prescription, workingMax, bestTestBefore, testDue,
@@ -223,6 +223,51 @@ test("fullWeekStreak: consecutive completed 2+2 weeks before this one", () => {
   assert.equal(fullWeekStreak({ days, goals: GOALS }, todayKey()), 2);
   delete days[keyPlus(mon, -14)];
   assert.equal(fullWeekStreak({ days, goals: GOALS }, todayKey()), 1);
+});
+
+console.log("training suggestion + heatmap");
+// Use a mid-week anchor so every relative day stays inside the fixed week.
+const anchor = fixedWeek[3]; // Thursday
+const sData = (days) => ({ days, goals: GOALS, runWeek: 4 });
+test("suggests a run when 48h+ since the last one", () => {
+  const days = { [fixedWeek[0]]: { activities: ["A"] }, [fixedWeek[1]]: { activities: ["run"] } }; // run 2d before anchor
+  const s = suggestTraining(sData(days), anchor);
+  assert.equal(s.act, "run");
+  assert.match(s.label, /Week 4/);
+});
+test("suggests strength (alternating to the older letter) when run was yesterday", () => {
+  const days = { [fixedWeek[0]]: { activities: ["A"] }, [fixedWeek[2]]: { activities: ["run"] } }; // run 1d before anchor
+  const s = suggestTraining(sData(days), anchor);
+  assert.equal(s.act, "B"); // A was done, B never → B is "older"
+});
+test("rest day when ran yesterday and strength is done", () => {
+  const days = {
+    [fixedWeek[0]]: { activities: ["A"] },
+    [fixedWeek[1]]: { activities: ["B"] },
+    [fixedWeek[2]]: { activities: ["run"] },
+  };
+  const s = suggestTraining(sData(days), anchor);
+  assert.equal(s.act, null);
+  assert.match(s.label, /Rest/);
+});
+test("week complete once both targets are hit", () => {
+  const days = {
+    [fixedWeek[0]]: { activities: ["run", "A"] },
+    [fixedWeek[1]]: { activities: ["B"] },
+    [fixedWeek[2]]: { activities: ["run"] },
+  };
+  assert.match(suggestTraining(sData(days), anchor).label, /Week complete/);
+});
+test("no suggestion once today has activities", () => {
+  const days = { [anchor]: { activities: ["run"] } };
+  assert.equal(suggestTraining(sData(days), anchor), null);
+});
+test("heatLevel: trained > logged > empty", () => {
+  assert.equal(heatLevel({ activities: ["run"] }), 2);
+  assert.equal(heatLevel({ weight: "210" }), 1);
+  assert.equal(heatLevel({ pullups: { sets: [{ grip: "chin", reps: 3 }] } }), 1);
+  assert.equal(heatLevel({}), 0);
+  assert.equal(heatLevel(undefined), 0);
 });
 
 console.log("food log");

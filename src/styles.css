@@ -266,3 +266,35 @@ button {
 }
 
 ::-webkit-scrollbar { display: none; }
+
+/* floating quick-log */
+.fab {
+  position: fixed;
+  right: 16px;
+  bottom: calc(84px + env(safe-area-inset-bottom));
+  z-index: 60;
+  width: 54px; height: 54px;
+  border-radius: 50%;
+  background: var(--ember);
+  color: var(--on-accent);
+  font-size: 28px; font-weight: 700; line-height: 1;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  display: flex; align-items: center; justify-content: center;
+}
+.sheet-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 55;
+}
+.sheet {
+  position: fixed;
+  left: 50%; transform: translateX(-50%);
+  bottom: calc(74px + env(safe-area-inset-bottom));
+  z-index: 58;
+  width: min(94vw, 480px);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 14px 16px calc(14px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+}

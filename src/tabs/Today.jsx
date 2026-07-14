@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Card, SectionLabel, Chip } from "../components/ui.jsx";
 import { num, netOf, sanitizeDecimal } from "../lib/util.js";
 import { todayKey, keyOffset, shortDay, niceDate } from "../lib/dates.js";
-import { weekStatsFor } from "../lib/coach.js";
+import { weekStatsFor, suggestTraining } from "../lib/coach.js";
+import HeroRing from "../features/HeroRing.jsx";
 import { getDay, patchDay } from "../store.jsx";
 import StrengthCard from "../features/StrengthCard.jsx";
 import RunCard from "../features/RunCard.jsx";
@@ -61,42 +62,28 @@ export default function Today({ data, update, goTo }) {
 
   return (
     <div className="fade-in">
-      {/* progress hero — results before inputs */}
-      <Card style={{ marginBottom: 12, display: "flex", alignItems: "center", gap: 14 }}>
-        <button onClick={() => goTo("progress")} style={{ flex: "1 1 40%", minWidth: 110, textAlign: "left" }}>
-          {weights.length >= 2 ? (() => {
-            const pts = weights.slice(-14);
-            const ys = pts.map((p) => p.w).concat(target !== null ? [target] : []);
-            const yMin = Math.min(...ys) - 1, yMax = Math.max(...ys) + 1;
-            const W = 130, H = 48;
-            const X = (i) => 2 + (i / (pts.length - 1)) * (W - 4);
-            const Y = (v) => 4 + (1 - (v - yMin) / (yMax - yMin || 1)) * (H - 8);
-            const path = pts.map((p, i) => `${i ? "L" : "M"}${X(i).toFixed(1)},${Y(p.w).toFixed(1)}`).join(" ");
-            return (
-              <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: "auto", display: "block" }}>
-                {target !== null && <line x1="2" x2={W - 2} y1={Y(target)} y2={Y(target)} stroke="var(--c-good)" strokeWidth="1.2" strokeDasharray="4 3" />}
-                <path d={path} fill="none" stroke="var(--c-ember)" strokeWidth="2.2" strokeLinejoin="round" strokeLinecap="round" />
-                <circle cx={X(pts.length - 1)} cy={Y(pts[pts.length - 1].w)} r="3.2" fill="var(--c-ember)" />
-              </svg>
-            );
-          })() : (
-            <div style={{ fontSize: 13, color: "var(--dim)", lineHeight: 1.4 }}>Log 2+ weigh-ins and your trend line appears here</div>
-          )}
-          <div style={{ fontSize: 11, color: "var(--dim)", letterSpacing: "0.06em", textTransform: "uppercase", fontWeight: 700, marginTop: 2 }}>
-            {weights.length ? `${weights[weights.length - 1].w} lbs · tap for graph` : "weight trend"}
+      {/* hero: the day as a budget + the week at a glance */}
+      <Card style={{ marginBottom: 12, display: "flex", alignItems: "center", gap: 10 }}>
+        <HeroRing data={data} day={day} />
+        <div className="grow" style={{ display: "flex", flexWrap: "wrap", gap: "8px 14px" }}>
+          <div style={{ flex: "1 1 40%", textAlign: "center" }}>
+            <div className="display" style={{ fontSize: 22, fontWeight: 700, color: weekStats.deficit > 0 ? "var(--good)" : weekStats.logged ? "var(--bad)" : "var(--dim)" }}>
+              {weekStats.logged ? `${weekStats.deficit > 0 ? "−" : "+"}${Math.abs(Math.round(weekStats.deficit)).toLocaleString()}` : "—"}
+            </div>
+            <div style={{ fontSize: 11, color: "var(--dim)", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700 }}>week kcal</div>
           </div>
-        </button>
-        <div style={{ flex: "1 1 25%", textAlign: "center" }}>
-          <div className="display" style={{ fontSize: 22, fontWeight: 700, color: weekStats.deficit > 0 ? "var(--good)" : weekStats.logged ? "var(--bad)" : "var(--dim)" }}>
-            {weekStats.logged ? `${weekStats.deficit > 0 ? "−" : "+"}${Math.abs(Math.round(weekStats.deficit)).toLocaleString()}` : "—"}
+          <div style={{ flex: "1 1 40%", textAlign: "center" }}>
+            <div className="display" style={{ fontSize: 22, fontWeight: 700, color: weekStats.runs + weekStats.strength >= sessionTarget ? "var(--good)" : "var(--text)" }}>
+              {weekStats.runs + weekStats.strength}<span style={{ fontSize: 15, color: "var(--dim)" }}>/{sessionTarget}</span>
+            </div>
+            <div style={{ fontSize: 11, color: "var(--dim)", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700 }}>sessions</div>
           </div>
-          <div style={{ fontSize: 11, color: "var(--dim)", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700 }}>week kcal</div>
-        </div>
-        <div style={{ flex: "1 1 20%", textAlign: "center" }}>
-          <div className="display" style={{ fontSize: 22, fontWeight: 700, color: weekStats.runs + weekStats.strength >= sessionTarget ? "var(--good)" : "var(--text)" }}>
-            {weekStats.runs + weekStats.strength}<span style={{ fontSize: 15, color: "var(--dim)" }}>/{sessionTarget}</span>
-          </div>
-          <div style={{ fontSize: 11, color: "var(--dim)", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700 }}>sessions</div>
+          <button onClick={() => goTo("progress")} style={{ flex: "1 1 100%", textAlign: "center" }}>
+            <span className="display" style={{ fontSize: 17, fontWeight: 700, color: "var(--ember)" }}>
+              {weights.length ? `${weights[weights.length - 1].w} lbs` : "no weigh-in"}
+            </span>
+            <span style={{ fontSize: 11, color: "var(--dim)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}> · graph →</span>
+          </button>
         </div>
       </Card>
 
@@ -152,6 +139,29 @@ export default function Today({ data, update, goTo }) {
           })()}
         </div>
       </Card>
+
+      {/* today's suggestion — tap to apply */}
+      {dateKey === todayKey() && (() => {
+        const sug = suggestTraining(data, dateKey);
+        if (!sug) return null;
+        return (
+          <button
+            onClick={() => sug.act && toggleActivity(sug.act)}
+            className="row"
+            style={{
+              width: "100%", textAlign: "left", gap: 10, marginBottom: 14, padding: "10px 12px",
+              borderRadius: 12, border: "1px solid color-mix(in srgb, var(--ember) 40%, var(--line))",
+              background: "color-mix(in srgb, var(--ember) 7%, transparent)",
+            }}>
+            <span style={{ fontSize: 18 }}>{sug.act === "run" ? "🏃" : sug.act ? "🏋️" : "🧘"}</span>
+            <span className="grow">
+              <span style={{ fontSize: 14, fontWeight: 800, color: "var(--ember)" }}>{sug.label}</span>
+              <span style={{ fontSize: 12, color: "var(--dim)", display: "block" }}>{sug.why}</span>
+            </span>
+            {sug.act && <span style={{ fontSize: 12, fontWeight: 800, color: "var(--ember)", flexShrink: 0 }}>tap to start →</span>}
+          </button>
+        );
+      })()}
 
       <SectionLabel>
         What did you train?{" "}

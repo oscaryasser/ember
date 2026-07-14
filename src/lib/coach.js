@@ -81,6 +81,54 @@ export function coachVerdict(data, dateKey) {
   return { headline, tone, lines, weekStats, lossRate, lossPct, avgProt, sessions, sessionTarget };
 }
 
+// "What should I train today?" — the week's gaps + the 48h run rule + A/B
+// alternation, condensed to one suggestion. Null once today has activities.
+export function suggestTraining(data, dateKey) {
+  const g = data.goals;
+  const today = data.days[dateKey];
+  if (today && (today.activities || []).length > 0) return null;
+
+  const s = weekStatsFor(data, dateKey);
+  const runsLeft = Math.max(0, g.weeklyRuns - s.runs);
+  const strengthLeft = Math.max(0, g.weeklyStrength - s.strength);
+
+  const daysSince = (pred) => {
+    for (let d = 1; d <= 30; d++) {
+      const dd = data.days[keyPlus(dateKey, -d)];
+      if (dd && pred(dd)) return d;
+    }
+    return null;
+  };
+  const sinceRun = daysSince((d) => (d.activities || []).includes("run"));
+  const sinceA = daysSince((d) => (d.activities || []).includes("A"));
+  const sinceB = daysSince((d) => (d.activities || []).includes("B"));
+  const ago = (n, label) => (n === null ? `no ${label} yet` : n === 1 ? `${label} yesterday` : `${label} ${n}d ago`);
+
+  if (runsLeft === 0 && strengthLeft === 0) {
+    return { act: null, label: "Week complete", why: `${s.runs}/${g.weeklyRuns} runs · ${s.strength}/${g.weeklyStrength} strength — rest, walk, easy pull-ups` };
+  }
+  const runOk = sinceRun === null || sinceRun >= 2;
+  if (runsLeft > 0 && (runOk || strengthLeft === 0)) {
+    if (runOk) {
+      return { act: "run", label: `Run · Week ${data.runWeek}`, why: `${runsLeft} run${runsLeft === 1 ? "" : "s"} left this week · ${ago(sinceRun, "last run")}` };
+    }
+    return { act: null, label: "Rest day", why: "ran yesterday and strength is done — tendons want the 48h" };
+  }
+  if (strengthLeft > 0) {
+    // alternate: pick the one done longer ago (never-done counts as longest)
+    const pick = (sinceA ?? 99) >= (sinceB ?? 99) ? "A" : "B";
+    return { act: pick, label: `Strength ${pick}`, why: `${ago(pick === "A" ? sinceA : sinceB, pick)} · ${ago(sinceRun, "last run")}` };
+  }
+  return null;
+}
+
+// Heatmap day classification: 2 = trained, 1 = logged something, 0 = empty.
+export function heatLevel(d) {
+  if (!d) return 0;
+  if ((d.activities || []).length > 0) return 2;
+  return hasAnyLog(d) || (d.pullups?.sets || []).length > 0 ? 1 : 0;
+}
+
 // Consecutive days with any log, ending today (a not-yet-logged today doesn't break it).
 export function logStreak(data) {
   let streak = 0;

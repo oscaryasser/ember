@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useStore } from "./store.jsx";
 import { RestTimerProvider } from "./features/RestTimer.jsx";
+import QuickLog from "./features/QuickLog.jsx";
 import { logStreak } from "./lib/coach.js";
 import Today from "./tabs/Today.jsx";
 import Plan from "./tabs/Plan.jsx";
@@ -70,6 +71,8 @@ export default function App() {
         {tab === "progress" && <Progress data={data} update={update} />}
         {tab === "goals" && <Goals data={data} update={update} saveState={saveState} lastSaved={lastSaved} />}
       </div>
+
+      <QuickLog data={data} update={update} />
 
       <nav className="nav">
         <div className="nav-inner">

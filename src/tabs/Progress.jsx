@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { Card, SectionLabel } from "../components/ui.jsx";
 import { num } from "../lib/util.js";
 import { LineChart } from "../components/charts.jsx";
+import Heatmap from "../features/Heatmap.jsx";
 import StrengthProgress from "../features/StrengthProgress.jsx";
 import PullupProgress from "../features/PullupProgress.jsx";
 import Measurements from "../features/Measurements.jsx";
@@ -70,6 +71,8 @@ export default function Progress({ data, update }) {
           </>
         )}
       </Card>
+
+      <Heatmap data={data} />
 
       <Card style={{ marginTop: 12 }}>
         <SectionLabel>Run pace · from your Garmin</SectionLabel>
