@@ -28,6 +28,7 @@ export default function Plan({ data }) {
         ))}
         <div style={{ fontSize: 13, color: "var(--dim)", marginTop: 8 }}>
           Every run: 5 min brisk walk warmup + 5 min cooldown. Repeat any week that felt hard. The guided timer beeps you through every switch.
+          After Week 10 (or any day you want something different) the timer also does custom intervals and free-duration runs.
         </div>
       </Card>
 

@@ -1,6 +1,25 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { num, intakeOf, proteinOf } from "../lib/util.js";
 import { resolveTargets } from "../lib/adaptive.js";
+
+// Animate a number toward its target over ~400ms — the ring counts instead of snapping.
+function useCountUp(target) {
+  const [shown, setShown] = useState(target);
+  const raf = useRef(0);
+  useEffect(() => {
+    const from = shown, to = target;
+    if (from === to || from === null || to === null) { setShown(to); return; }
+    const t0 = performance.now();
+    const step = (t) => {
+      const k = Math.min(1, (t - t0) / 400);
+      setShown(Math.round(from + (to - from) * (1 - Math.pow(1 - k, 3))));
+      if (k < 1) raf.current = requestAnimationFrame(step);
+    };
+    raf.current = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf.current);
+  }, [target]); // eslint-disable-line react-hooks/exhaustive-deps
+  return shown;
+}
 
 // The day as a budget: outer ring = calories spent vs target, inner arc =
 // protein progress, center = what's left to eat. Falls back gracefully when
@@ -17,6 +36,7 @@ export default function HeroRing({ data, day }) {
   const protPct = protGoal ? Math.min(1, prot / protGoal) : 0;
   const over = targets.kcal !== null && intake > targets.kcal;
   const left = targets.kcal !== null ? targets.kcal - intake : null;
+  const centerShown = useCountUp(left !== null ? Math.abs(Math.round(left)) : intake || 0);
 
   return (
     <div className="row" style={{ gap: 6, alignItems: "center" }}>
@@ -39,7 +59,7 @@ export default function HeroRing({ data, day }) {
         <text x={CX} y={CY - 4} textAnchor="middle" fontSize="22" fontWeight="700"
           fill={over ? "var(--c-bad)" : "var(--c-text, currentColor)"} className="display"
           style={{ fontVariantNumeric: "tabular-nums" }}>
-          {left !== null ? Math.abs(Math.round(left)).toLocaleString() : intake ? intake.toLocaleString() : "—"}
+          {left !== null || intake ? (centerShown ?? 0).toLocaleString() : "—"}
         </text>
         <text x={CX} y={CY + 12} textAnchor="middle" fontSize="8.5" fill="var(--dim)" style={{ textTransform: "uppercase", letterSpacing: "0.08em" }}>
           {left !== null ? (over ? "kcal over" : "kcal left") : "kcal logged"}

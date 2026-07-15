@@ -3,6 +3,7 @@ import { Card, SectionLabel } from "../components/ui.jsx";
 import { DEFAULT_GOALS } from "../store.jsx";
 import { sanitizeDecimal } from "../lib/util.js";
 import { normalizeImport, summarizeImport, mergeImport, downloadExport, buildExport } from "../lib/importExport.js";
+import { buildCoachBrief } from "../lib/brief.js";
 import { kvSet } from "../lib/idb.js";
 import { niceDate } from "../lib/dates.js";
 
@@ -31,6 +32,7 @@ export default function Goals({ data, update, saveState, lastSaved }) {
   const [pasteOpen, setPasteOpen] = useState(false);
   const [pasteText, setPasteText] = useState("");
   const [copied, setCopied] = useState(false);
+  const [briefCopied, setBriefCopied] = useState(false);
 
   const setGoal = (id, v) => update((d) => ({ ...d, goals: { ...d.goals, [id]: v } }));
 
@@ -159,6 +161,23 @@ export default function Goals({ data, update, saveState, lastSaved }) {
             </div>
           </div>
         )}
+      </Card>
+
+      <Card style={{ marginTop: 12 }}>
+        <SectionLabel color="var(--good)">AI coach brief</SectionLabel>
+        <div style={{ fontSize: 13, color: "var(--dim)", marginBottom: 10 }}>
+          Your last 4 weeks — TDEE, deficit, lifts, runs, pull-ups, sleep, verdicts — as one paste-ready
+          block. Drop it into Claude whenever you want a second opinion on the plan.
+        </div>
+        <button className="btn primary" style={{ width: "100%", fontWeight: 800 }} onClick={async () => {
+          try {
+            await navigator.clipboard.writeText(buildCoachBrief(data));
+            setBriefCopied(true);
+            setTimeout(() => setBriefCopied(false), 2000);
+          } catch { alert("Clipboard blocked — try again after tapping the page."); }
+        }}>
+          {briefCopied ? "✓ Copied — paste it to your AI of choice" : "📋 Copy AI coach brief"}
+        </button>
       </Card>
 
       <Card style={{ marginTop: 12 }}>

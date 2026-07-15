@@ -46,6 +46,22 @@ export function bestBefore(data, exName, dateKey) {
   return best;
 }
 
+// Append a set to a day and detect a PR against real history (shared by the
+// strength card and gym mode so the rules can never drift apart).
+export function buildSetPatch(data, day, dateKey, id, exName, w, r) {
+  const todaySets = ((day.sets || {})[id] || {})[exName] || [];
+  const newE1 = e1rm(w ?? 0, r);
+  const prevBest = Math.max(bestBefore(data, exName, dateKey), ...todaySets.map((s) => e1rm(s.w, s.r)), 0);
+  const sets = { ...(day.sets || {}) };
+  sets[id] = { ...(sets[id] || {}) };
+  sets[id][exName] = [...todaySets, { w: w ?? 0, r }];
+  const hadHistory = lastSetsFor(data, id, exName, dateKey) !== null;
+  const pr = hadHistory && prevBest > 0 && newE1 > prevBest
+    ? { name: exName, w: w ?? 0, r, new: newE1, old: prevBest }
+    : null;
+  return { sets, pr };
+}
+
 export function lastSetsFor(data, id, exName, beforeKey) {
   const keys = Object.keys(data.days).filter((k) => k < beforeKey).sort().reverse();
   for (const k of keys) {

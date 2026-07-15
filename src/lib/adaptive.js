@@ -107,3 +107,45 @@ export function resolveTargets(data) {
 // Calories from macros (Atwater 4/4/9) — for auto-filling new food entries.
 export const kcalFromMacros = (p, c, f) =>
   Math.round((num(p) || 0) * 4 + (num(c) || 0) * 4 + (num(f) || 0) * 9);
+
+// Metabolic-adaptation watch: compare the measured TDEE now against the same
+// measurement ending three weeks ago. A real drop while still cutting means
+// the body has adapted — the fix is a 5–7 day maintenance break, not a
+// deeper deficit. Also flags very long unbroken cuts on principle.
+export const ADAPTATION_GAP_DAYS = 21;
+
+export function adaptationCheck(data) {
+  const now = estimateTDEE(data);
+  const past = estimateTDEE(data, ADAPTATION_GAP_DAYS);
+  if (!now.ok || !past.ok) return { flagged: false, reason: "needs two comparable measurement windows" };
+  const drop = past.tdee - now.tdee;
+  const pct = (drop / past.tdee) * 100;
+  const stillCutting = now.avgIntake < now.tdee - 100;
+  if (drop >= 120 && pct >= 4 && stillCutting) {
+    return {
+      flagged: true, drop: Math.round(drop), pct: Math.round(pct * 10) / 10,
+      nowTdee: now.tdee, pastTdee: past.tdee,
+      advice: `Your measured burn dropped ${Math.round(drop)} kcal (−${Math.round(pct)}%) in three weeks — classic adaptation. Eat at maintenance (~${now.tdee.toLocaleString()} kcal) for 5–7 days, then resume the deficit. You'll lose faster after the break than through it.`,
+    };
+  }
+  return { flagged: false, drop: Math.round(drop), pct: Math.round(pct * 10) / 10 };
+}
+
+// Protein gap-closer: rank the user's own foods by how efficiently they close
+// tonight's remaining protein inside the remaining calorie budget.
+export function gapSuggestions(data, day, targets, intakeNow, proteinNow) {
+  const needP = (targets.protein || 0) - proteinNow;
+  if (needP < 8) return null; // close enough — don't nag
+  const budget = targets.kcal !== null ? Math.max(0, targets.kcal - intakeNow) : Infinity;
+  const picks = (data.foods || [])
+    .filter((f) => (num(f.p) || 0) >= 5)
+    .map((f) => {
+      const p = num(f.p), kcal = num(f.kcal) || 0;
+      const servings = Math.min(3, Math.max(1, Math.ceil(needP / p)));
+      return { food: f, servings, gp: Math.round(p * servings), kcal: Math.round(kcal * servings), density: p / Math.max(kcal, 1) };
+    })
+    .filter((s) => s.kcal <= budget + 60)
+    .sort((a, b) => b.density - a.density || b.gp - a.gp)
+    .slice(0, 3);
+  return { needP: Math.round(needP), budget: budget === Infinity ? null : Math.round(budget), picks };
+}

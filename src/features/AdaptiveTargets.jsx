@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { Card, SectionLabel } from "../components/ui.jsx";
 import { num, intakeOf } from "../lib/util.js";
 import { keyOffset } from "../lib/dates.js";
-import { estimateTDEE, resolveTargets, WINDOW_DAYS } from "../lib/adaptive.js";
+import { estimateTDEE, resolveTargets, adaptationCheck, WINDOW_DAYS } from "../lib/adaptive.js";
 
 // Measured metabolism: TDEE from the energy-balance identity over the trailing
 // window, compared against what the watch claims — plus the intake + macro
@@ -11,6 +11,7 @@ import { estimateTDEE, resolveTargets, WINDOW_DAYS } from "../lib/adaptive.js";
 export default function AdaptiveTargets({ data, update }) {
   const est = useMemo(() => estimateTDEE(data), [data]);
   const targets = useMemo(() => resolveTargets(data), [data]);
+  const adapt = useMemo(() => adaptationCheck(data), [data]);
 
   const garminAvg = useMemo(() => {
     const vals = [];
@@ -79,6 +80,13 @@ export default function AdaptiveTargets({ data, update }) {
         eating {est.avgIntake.toLocaleString()}/day while trending {est.lbsPerWeek <= 0 ? "" : "+"}{est.lbsPerWeek} lb/week.
         The scale doesn't lie about averages.
       </div>
+
+      {adapt.flagged && (
+        <div style={{ padding: "10px 12px", borderRadius: 12, marginBottom: 10, background: "color-mix(in srgb, var(--ember) 8%, transparent)", border: "1px solid color-mix(in srgb, var(--ember) 40%, var(--line))" }}>
+          <div style={{ fontSize: 14, fontWeight: 800, color: "var(--ember)" }}>⚠ Diet break earned</div>
+          <div style={{ fontSize: 13, lineHeight: 1.5, marginTop: 4 }}>{adapt.advice}</div>
+        </div>
+      )}
 
       {targets.kcal !== null && (
         <div style={{ padding: "10px 12px", borderRadius: 12, background: "color-mix(in srgb, var(--fuel) 7%, transparent)", border: "1px solid color-mix(in srgb, var(--fuel) 30%, var(--line))" }}>

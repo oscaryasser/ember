@@ -1,8 +1,21 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { RUN_WEEKS, buildRunSegments, totalSecs } from "../plan.js";
+import { RUN_WEEKS, buildRunSegments, buildCustomSegments, totalSecs } from "../plan.js";
 import { fmtClock } from "../lib/dates.js";
 import { unlockAudio, cues } from "../lib/audio.js";
 import { keepAwake, releaseAwake } from "../lib/wakeLock.js";
+import { Seg } from "../components/ui.jsx";
+
+// Stepper for the custom-session builder.
+const Step = ({ label, value, onChange, min, max, inc = 1, unit }) => (
+  <div style={{ flex: 1, textAlign: "center" }}>
+    <div className="field-label" style={{ textAlign: "center" }}>{label}</div>
+    <div className="row" style={{ gap: 6, justifyContent: "center" }}>
+      <button className="btn" style={{ width: 40, fontWeight: 800 }} onClick={() => onChange(Math.max(min, +(value - inc).toFixed(1)))}>−</button>
+      <div className="display" style={{ fontSize: 22, fontWeight: 700, minWidth: 44 }}>{value}{unit}</div>
+      <button className="btn" style={{ width: 40, fontWeight: 800 }} onClick={() => onChange(Math.min(max, +(value + inc).toFixed(1)))}>+</button>
+    </div>
+  </div>
+);
 
 const SEG_STYLE = {
   jog:    { bg: "#3d1d08", accent: "var(--ember)", verb: "JOG" },
@@ -21,11 +34,18 @@ function locate(segments, elapsed) {
   return { i: segments.length, remaining: 0 };
 }
 
-export default function RunTimer({ week, onComplete, onClose }) {
+export default function RunTimer({ week, customCfg, onCustomChange, onComplete, onClose }) {
   const rw = RUN_WEEKS[week];
   const [variant, setVariant] = useState(0);
-  const segments = useMemo(() => buildRunSegments(week, variant), [week, variant]);
+  const [mode, setMode] = useState("plan"); // plan | intervals | free
+  const [cfg, setCfg] = useState(customCfg || { reps: 5, jogMins: 3, walkMins: 1.5, mins: 30 });
+  const segments = useMemo(
+    () => (mode === "plan" ? buildRunSegments(week, variant) : buildCustomSegments({ ...cfg, kind: mode === "free" ? "free" : "intervals" })),
+    [mode, week, variant, cfg]
+  );
   const total = useMemo(() => totalSecs(segments), [segments]);
+  const title = mode === "plan" ? `${rw.label} run` : mode === "free" ? "Free run" : "Custom intervals";
+  const subtitle = mode === "plan" ? rw.protocol : mode === "free" ? `${cfg.mins} min continuous` : `${cfg.reps} × (${cfg.jogMins} min run / ${cfg.walkMins} min walk)`;
 
   const [phase, setPhase] = useState("ready"); // ready | running | paused | done
   const [now, setNow] = useState(0);
@@ -113,8 +133,8 @@ export default function RunTimer({ week, onComplete, onClose }) {
     <div className="timer-overlay" style={{ background: finished ? "var(--bg)" : phase === "ready" ? "var(--bg)" : style.bg }}>
       <div className="row" style={{ justifyContent: "space-between" }}>
         <div>
-          <div className="display" style={{ fontSize: 20, fontWeight: 700 }}>{rw.label} run</div>
-          <div style={{ fontSize: 13, color: "var(--dim)" }}>{rw.protocol}</div>
+          <div className="display" style={{ fontSize: 20, fontWeight: 700 }}>{title}</div>
+          <div style={{ fontSize: 13, color: "var(--dim)" }}>{subtitle}</div>
         </div>
         <button className="btn ghost" onClick={phase === "ready" || finished ? onClose : endEarly}>
           {phase === "ready" || finished ? "Close" : "End"}
@@ -123,7 +143,26 @@ export default function RunTimer({ week, onComplete, onClose }) {
 
       {phase === "ready" && (
         <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", gap: 18 }}>
-          {rw.continuous && rw.continuous.length > 1 && (
+          <div style={{ alignSelf: "center" }}>
+            <Seg
+              options={[["plan", `Week ${week}`], ["intervals", "Intervals"], ["free", "Free run"]]}
+              value={mode}
+              onChange={(m) => { setMode(m); if (m !== "plan") onCustomChange?.(cfg); }}
+            />
+          </div>
+          {mode === "intervals" && (
+            <div className="row" style={{ gap: 8 }}>
+              <Step label="Rounds" value={cfg.reps} min={1} max={20} onChange={(v) => { const c = { ...cfg, reps: v }; setCfg(c); onCustomChange?.(c); }} />
+              <Step label="Run" value={cfg.jogMins} min={0.5} max={30} inc={0.5} unit="m" onChange={(v) => { const c = { ...cfg, jogMins: v }; setCfg(c); onCustomChange?.(c); }} />
+              <Step label="Walk" value={cfg.walkMins} min={0.5} max={10} inc={0.5} unit="m" onChange={(v) => { const c = { ...cfg, walkMins: v }; setCfg(c); onCustomChange?.(c); }} />
+            </div>
+          )}
+          {mode === "free" && (
+            <div className="row">
+              <Step label="Duration" value={cfg.mins} min={5} max={180} inc={5} unit="m" onChange={(v) => { const c = { ...cfg, mins: v }; setCfg(c); onCustomChange?.(c); }} />
+            </div>
+          )}
+          {mode === "plan" && rw.continuous && rw.continuous.length > 1 && (
             <div>
               <div className="section-label">Which run this week?</div>
               <div className="chips">
@@ -198,7 +237,7 @@ export default function RunTimer({ week, onComplete, onClose }) {
           <div style={{ fontSize: 56 }}>🔥</div>
           <div className="display" style={{ fontSize: 30, fontWeight: 700 }}>Run complete</div>
           <div style={{ color: "var(--dim)", fontSize: 15 }}>
-            {rw.label} logged and marked done. Grab the distance off your Garmin and drop it in the run card.
+            {title} logged and marked done. Grab the distance off your Garmin and drop it in the run card.
           </div>
           <button className="btn primary display" style={{ fontSize: 20, padding: "14px 0", borderRadius: 16 }} onClick={onClose}>
             Log distance

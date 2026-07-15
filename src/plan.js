@@ -47,6 +47,26 @@ export function buildRunSegments(week, variant = 0) {
   return segs;
 }
 
+// Life after Week 10: user-built interval sessions and free-duration runs,
+// with the same warmup/cooldown bookends and guided cues as the plan weeks.
+export function buildCustomSegments(cfg) {
+  const segs = [{ type: "warmup", label: "Warmup walk", secs: WARMUP_SECS }];
+  if (cfg.kind === "free") {
+    const mins = Math.max(1, Math.round(cfg.mins || 30));
+    segs.push({ type: "jog", label: `${mins} min run`, secs: mins * 60 });
+  } else {
+    const reps = Math.max(1, Math.round(cfg.reps || 5));
+    const jog = Math.max(10, Math.round((cfg.jogMins || 3) * 60));
+    const walk = Math.max(10, Math.round((cfg.walkMins || 1.5) * 60));
+    for (let i = 1; i <= reps; i++) {
+      segs.push({ type: "jog", label: `Run ${i}/${reps}`, secs: jog });
+      if (i < reps) segs.push({ type: "walk", label: `Recover ${i}/${reps - 1}`, secs: walk });
+    }
+  }
+  segs.push({ type: "cool", label: "Cooldown walk", secs: COOLDOWN_SECS });
+  return segs;
+}
+
 export const totalSecs = (segs) => segs.reduce((a, s) => a + s.secs, 0);
 
 export const STRENGTH = {

@@ -1,15 +1,18 @@
 import { useState } from "react";
 import { STRENGTH } from "../plan.js";
-import { Card, Check, Seg } from "../components/ui.jsx";
-import { num, e1rm, round1, sanitizeDecimal, sanitizeInt } from "../lib/util.js";
-import { bestBefore, lastSetsFor } from "../lib/strength.js";
+import { Card, Check, Seg, SectionLabel } from "../components/ui.jsx";
+import { num, round1, sanitizeDecimal, sanitizeInt } from "../lib/util.js";
+import { lastSetsFor, buildSetPatch } from "../lib/strength.js";
 import { unlockAudio, cues } from "../lib/audio.js";
 import { useRestTimer } from "./RestTimer.jsx";
+import GymMode from "./GymMode.jsx";
 
 export default function StrengthCard({ id, data, day, setDay, update, dateKey }) {
   const [drafts, setDrafts] = useState({});
   const [openSets, setOpenSets] = useState({});
   const [pr, setPr] = useState(null);
+  const [gymOpen, setGymOpen] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const { startRest } = useRestTimer();
 
   const modeKey = "mode" + id;
@@ -18,6 +21,22 @@ export default function StrengthCard({ id, data, day, setDay, update, dateKey })
   const list = [...STRENGTH[id][mode], ...custom];
   const checks = (day.checks || {})[id] || [];
   const draft = drafts["new"] || "";
+
+  // Done-collapse: every exercise checked → shrink to the green summary line.
+  const allDone = list.length > 0 && list.every((_, i) => checks[i]);
+  const setCount = Object.values((day.sets || {})[id] || {}).reduce((a, s) => a + s.length, 0);
+  if (allDone && !expanded && !gymOpen) {
+    return (
+      <Card style={{ marginTop: 12, borderColor: "color-mix(in srgb, var(--good) 40%, var(--line))" }}>
+        <button className="row" style={{ width: "100%", justifyContent: "space-between", textAlign: "left" }} onClick={() => setExpanded(true)}>
+          <SectionLabel>{STRENGTH[id].name}</SectionLabel>
+          <div style={{ fontSize: 13, fontWeight: 700, color: "var(--good)", marginBottom: 10 }}>
+            ✓ done · {setCount} sets ▾
+          </div>
+        </button>
+      </Card>
+    );
+  }
 
   const setDraft = (k, v) => setDrafts((s) => ({ ...s, [k]: v }));
 
@@ -58,10 +77,19 @@ export default function StrengthCard({ id, data, day, setDay, update, dateKey })
           </div>
         </div>
       )}
+      {gymOpen && (
+        <GymMode id={id} data={data} day={day} setDay={setDay} dateKey={dateKey} onClose={() => setGymOpen(false)} />
+      )}
       <div className="row" style={{ justifyContent: "space-between", marginBottom: 10 }}>
         <div className="display" style={{ fontSize: 19, fontWeight: 700 }}>{STRENGTH[id].name}</div>
         <Seg options={[["home", "Home"], ["gym", "Gym"]]} value={mode} onChange={(m) => setDay({ [modeKey]: m })} />
       </div>
+      {!allDone && (
+        <button className="btn primary display" style={{ width: "100%", marginBottom: 10, padding: "13px 0", fontSize: 18, borderRadius: 12 }}
+          onClick={() => setGymOpen(true)}>
+          ▶ Gym mode · one lift at a time
+        </button>
+      )}
 
       {list.map((ex, i) => {
         const isCustom = i >= STRENGTH[id][mode].length;
@@ -78,20 +106,11 @@ export default function StrengthCard({ id, data, day, setDay, update, dateKey })
           const wv = num(wDraft), rv = num(rDraft);
           if (rv === null) return;
           unlockAudio(); // user gesture — arms the rest-done beep
-          const newE1 = e1rm(wv ?? 0, rv);
-          const prevBest = Math.max(
-            bestBefore(data, exName, dateKey),
-            ...todaySets.map((s) => e1rm(s.w, s.r)),
-            0
-          );
-          const sets = { ...(day.sets || {}) };
-          sets[id] = { ...(sets[id] || {}) };
-          sets[id][exName] = [...(sets[id][exName] || []), { w: wv ?? 0, r: rv }];
+          const { sets, pr: hit } = buildSetPatch(data, day, dateKey, id, exName, wv, rv);
           setDay({ sets });
           setDraft("r-" + rowKey, "");
-          // Only celebrate against real history — a first-ever session isn't a PR.
-          if (last && prevBest > 0 && newE1 > prevBest) {
-            setPr({ name: exName, w: wv ?? 0, r: rv, new: newE1, old: prevBest });
+          if (hit) {
+            setPr(hit);
             cues.pr();
             setTimeout(() => setPr(null), 3500);
           }

@@ -48,6 +48,7 @@ function migrate(parsed) {
     runAck: d.runAck || {},
     custom: d.custom || {},
     foods: Array.isArray(d.foods) ? d.foods.filter((f) => f && typeof f === "object" && typeof f.name === "string") : [],
+    customRun: d.customRun && typeof d.customRun === "object" ? d.customRun : null,
     goals: { ...DEFAULT_GOALS, ...(d.goals || {}), ...(!d.goals && d.targetWeight ? { targetWeight: d.targetWeight } : {}) },
   };
 }

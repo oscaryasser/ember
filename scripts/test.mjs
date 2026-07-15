@@ -1,6 +1,10 @@
 // Node unit tests for the pure logic. Run with: npm test
 import assert from "node:assert/strict";
-import { buildRunSegments, totalSecs, RUN_WEEKS } from "../src/plan.js";
+import { buildRunSegments, buildCustomSegments, totalSecs, RUN_WEEKS } from "../src/plan.js";
+import { plateBreakdown, warmupRamp } from "../src/lib/plates.js";
+import { recompCheck } from "../src/lib/recomp.js";
+import { adaptationCheck, gapSuggestions } from "../src/lib/adaptive.js";
+import { buildCoachBrief } from "../src/lib/brief.js";
 import { normalizeImport, summarizeImport, mergeImport } from "../src/lib/importExport.js";
 import { num, netOf, proteinOf, e1rm, sanitizeDay, safeParse, pickFresher, intakeOf, mealTotals, sleepTotalOf } from "../src/lib/util.js";
 import { estimateTDEE, resolveTargets, weightSlope, kcalFromMacros } from "../src/lib/adaptive.js";
@@ -223,6 +227,103 @@ test("fullWeekStreak: consecutive completed 2+2 weeks before this one", () => {
   assert.equal(fullWeekStreak({ days, goals: GOALS }, todayKey()), 2);
   delete days[keyPlus(mon, -14)];
   assert.equal(fullWeekStreak({ days, goals: GOALS }, todayKey()), 1);
+});
+
+console.log("custom runs + gym math");
+test("custom intervals: reps with recovery walks + bookends", () => {
+  const segs = buildCustomSegments({ kind: "intervals", reps: 4, jogMins: 2, walkMins: 1 });
+  assert.equal(segs.filter((s) => s.type === "jog").length, 4);
+  assert.equal(segs.filter((s) => s.type === "walk").length, 3);
+  assert.equal(totalSecs(segs), 300 + 4 * 120 + 3 * 60 + 300);
+});
+test("free run: single continuous block", () => {
+  const segs = buildCustomSegments({ kind: "free", mins: 35 });
+  assert.deepEqual(segs.map((s) => s.type), ["warmup", "jog", "cool"]);
+  assert.equal(segs[1].secs, 2100);
+});
+test("plate breakdown: greedy per-side, rounds down when unloadable", () => {
+  assert.deepEqual(plateBreakdown(185).perSide, [45, 25]);
+  assert.equal(plateBreakdown(185).achieved, 185);
+  assert.deepEqual(plateBreakdown(137).perSide, [45, 1].slice(0, 1)); // (137−45)/2 = 46 → one 45, rest unloadable
+  assert.equal(plateBreakdown(137).achieved, 135);
+  assert.equal(plateBreakdown(40), null); // below the bar
+});
+test("warm-up ramp: bar → 50% → 70%, rounded to 5s", () => {
+  const ramp = warmupRamp(200);
+  assert.deepEqual(ramp.map((s) => s.w), [45, 100, 140]);
+  assert.equal(warmupRamp(50).length, 1); // too light to ramp
+});
+
+console.log("recomp check");
+const recompFixture = ({ waistNow, waistPrev, wRecent, wEarlier, liftRecent, liftEarlier }) => {
+  const days = {};
+  for (let i = 0; i <= 13; i++) days[keyOffset(-i)] = { weight: String(wRecent) };
+  for (let i = 14; i <= 27; i++) days[keyOffset(-i)] = { weight: String(wEarlier) };
+  days[keyOffset(-2)] = { ...days[keyOffset(-2)], measurements: { waist: String(waistNow) } };
+  days[keyOffset(-20)] = { ...days[keyOffset(-20)], measurements: { waist: String(waistPrev) } };
+  days[keyOffset(-3)] = { ...days[keyOffset(-3)], sets: { A: { "Leg press": [{ w: liftRecent, r: 10 }] } } };
+  days[keyOffset(-30)] = { sets: { A: { "Leg press": [{ w: liftEarlier, r: 10 }] } } };
+  return { days, goals: GOALS };
+};
+test("recomp check: waist down + strength up + scale asleep → textbook recomp", () => {
+  const rc = recompCheck(recompFixture({ waistNow: 36.0, waistPrev: 36.5, wRecent: 210, wEarlier: 210, liftRecent: 200, liftEarlier: 190 }));
+  assert.equal(rc.ready, true);
+  assert.equal(rc.tone, "good");
+  assert.match(rc.headline, /Textbook recomp/);
+});
+test("recomp check: weight down but strength sliding → muscle-loss warning", () => {
+  const rc = recompCheck(recompFixture({ waistNow: 36.5, waistPrev: 36.5, wRecent: 208, wEarlier: 210, liftRecent: 180, liftEarlier: 200 }));
+  assert.equal(rc.tone, "bad");
+  assert.match(rc.headline, /Muscle-loss risk/);
+});
+test("recomp check: honest about missing data", () => {
+  const rc = recompCheck({ days: {}, goals: GOALS });
+  assert.equal(rc.ready, false);
+  assert.equal(rc.missing.length, 3);
+});
+
+console.log("adaptation + gap closer");
+test("adaptationCheck flags a measured TDEE drop while still cutting", () => {
+  const days = {};
+  for (let i = 0; i <= 48; i++) {
+    days[keyOffset(-i)] = { calIn: String(i <= 20 ? 2000 : 2400) };
+    if (i % 7 === 0) days[keyOffset(-i)].weight = String(205 + 0.1 * i);
+  }
+  const a = adaptationCheck({ days, goals: GOALS });
+  assert.equal(a.flagged, true);
+  assert.ok(a.drop >= 250, `drop ${a.drop}`);
+});
+test("adaptationCheck stays quiet without a real drop", () => {
+  const days = {};
+  for (let i = 0; i <= 48; i++) {
+    days[keyOffset(-i)] = { calIn: "2000" };
+    if (i % 7 === 0) days[keyOffset(-i)].weight = String(205 + 0.1 * i);
+  }
+  assert.equal(adaptationCheck({ days, goals: GOALS }).flagged, false);
+});
+test("gap closer: densest library foods that fit the calorie budget", () => {
+  const data = { foods: [
+    { id: "1", name: "Shake", p: 30, kcal: 150 },
+    { id: "2", name: "Chicken plate", p: 50, kcal: 400 },
+    { id: "3", name: "Rice", p: 4, kcal: 200 },
+  ] };
+  const g = gapSuggestions(data, {}, { protein: 160, kcal: 2000 }, 1700, 120);
+  assert.equal(g.needP, 40);
+  assert.equal(g.picks[0].food.name, "Shake");
+  assert.equal(g.picks[0].servings, 2);
+  assert.ok(!g.picks.some((p) => p.food.name === "Chicken plate")); // 400 kcal doesn't fit 300 budget
+  assert.equal(gapSuggestions(data, {}, { protein: 160, kcal: 2000 }, 1700, 158), null); // close enough
+});
+test("coach brief contains the load-bearing numbers", () => {
+  const days = {};
+  for (let i = 0; i < 28; i++) {
+    days[keyOffset(-i)] = { calIn: "2000", proteinEntries: [160], weight: i % 3 ? "" : String(210 - 0.05 * (28 - i)) };
+  }
+  const brief = buildCoachBrief({ days, goals: GOALS, runWeek: 4, foods: [] });
+  assert.match(brief, /EMBER COACH BRIEF/);
+  assert.match(brief, /Measured TDEE/);
+  assert.match(brief, /Protein: avg 160g/);
+  assert.match(brief, /run plan week 4\/10/);
 });
 
 console.log("training suggestion + heatmap");

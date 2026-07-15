@@ -34,7 +34,9 @@ export default function RunCard({ data, day, setDay, update, dateKey }) {
   return (
     <Card style={{ marginTop: 12 }}>
       {timerOpen && (
-        <RunTimer week={w} onComplete={markComplete} onClose={() => setTimerOpen(false)} />
+        <RunTimer week={w} customCfg={data.customRun || undefined}
+          onCustomChange={(cfg) => update((d) => ({ ...d, customRun: cfg }))}
+          onComplete={markComplete} onClose={() => setTimerOpen(false)} />
       )}
       <div className="row" style={{ justifyContent: "space-between", marginBottom: 8 }}>
         <div className="display" style={{ fontSize: 19, fontWeight: 700 }}>Run · {rw.label}</div>
@@ -58,7 +60,7 @@ export default function RunCard({ data, day, setDay, update, dateKey }) {
       {!done && (
         <button className="btn primary display" style={{ width: "100%", marginTop: 12, padding: "13px 0", fontSize: 18, borderRadius: 12 }}
           onClick={() => setTimerOpen(true)}>
-          ▶ Guided run · beeps on every switch
+          ▶ Guided run · plan week, intervals, or free
         </button>
       )}
 

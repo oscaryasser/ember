@@ -12,7 +12,8 @@ import {
 // strength sessions — it doesn't touch activities or the weekly session count.
 export default function PullupCard({ data, day, setDay, dateKey, goals }) {
   const sets = pullupSets(day);
-  const [collapsed, setCollapsed] = useState(sets.length === 0);
+  const rxDone = sets.length >= prescription(workingMax(data, suggestedGrip(data, dateKey))?.reps ?? null).sets;
+  const [collapsed, setCollapsed] = useState(sets.length === 0 || rxDone);
   const [gripSel, setGripSel] = useState(null);
   const [assist, setAssist] = useState("full");
   const [repsDraft, setRepsDraft] = useState(null); // null → prescribed default
@@ -61,7 +62,7 @@ export default function PullupCard({ data, day, setDay, dateKey, goals }) {
 
   const status =
     sets.length > 0
-      ? `${vol} reps · ${sets.length} set${sets.length === 1 ? "" : "s"} ${collapsed ? "▾" : "▴"}`
+      ? `${sets.length >= rx.sets ? "✓ " : ""}${vol} reps · ${sets.length} set${sets.length === 1 ? "" : "s"} ${collapsed ? "▾" : "▴"}`
       : wm
         ? `${GRIPS[sugg].short} day · ${rx.level} ${collapsed ? "▾" : "▴"}`
         : `start here — test your max ${collapsed ? "▾" : "▴"}`;

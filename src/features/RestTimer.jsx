@@ -5,7 +5,7 @@ import { fmtClock } from "../lib/dates.js";
 // Global rest timer: any strength card can start it; a floating pill above the
 // nav shows the countdown with +30s. Timestamp-based so backgrounding is safe.
 
-const RestCtx = createContext({ startRest: () => {} });
+const RestCtx = createContext({ startRest: () => {}, restRemaining: 0, restActive: false, addRest: () => {}, stopRest: () => {} });
 export const useRestTimer = () => useContext(RestCtx);
 
 export function RestTimerProvider({ children, defaultSecs = 90 }) {
@@ -35,9 +35,11 @@ export function RestTimerProvider({ children, defaultSecs = 90 }) {
   }, [endsAt]);
 
   const remaining = endsAt ? Math.max(0, (endsAt - Date.now()) / 1000) : 0;
+  const addRest = useCallback(() => setEndsAt((e) => (e ? e + 30000 : e)), []);
+  const stopRest = useCallback(() => setEndsAt(null), []);
 
   return (
-    <RestCtx.Provider value={{ startRest }}>
+    <RestCtx.Provider value={{ startRest, restRemaining: remaining, restActive: !!endsAt, addRest, stopRest }}>
       {children}
       {endsAt && (
         <div className="rest-bar fade-in">
