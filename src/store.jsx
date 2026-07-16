@@ -72,48 +72,87 @@ export function StoreProvider({ children }) {
   const [lastSaved, setLastSaved] = useState(null);
   const saveTimer = useRef(null);
   const loadedRef = useRef(false);
+  const dataRef = useRef(null);          // latest state, for the flush handlers
+  const pendingRef = useRef(false);      // a debounced save is queued
+  const lastWrittenAt = useRef(0);       // savedAt of our most recent write/load
+
+  dataRef.current = data;
 
   useEffect(() => {
     loadInitial().then((d) => {
+      lastWrittenAt.current = Date.now();
       setData(d);
       loadedRef.current = true;
     });
     if (navigator.storage?.persist) navigator.storage.persist().catch(() => {});
   }, []);
 
-  // Debounced dual-write: localStorage (verified read-back) + IndexedDB mirror.
-  useEffect(() => {
-    if (!loadedRef.current || data === null) return;
-    setSaveState("saving");
-    clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(() => {
-      // savedAt lets loadInitial pick the newer copy when the two stores diverge.
-      const json = JSON.stringify({ ...data, savedAt: Date.now() });
-      let ok = false;
-      try {
-        localStorage.setItem(KEY, json);
-        ok = localStorage.getItem(KEY) === json;
-      } catch { ok = false; }
-      kvSet(KEY, json)
-        .then(() => {
+  // The actual dual write. Synchronous localStorage first — this is the part
+  // that must land even when iOS is about to suspend the page.
+  const persistNow = useCallback((d) => {
+    const savedAt = Date.now();
+    const json = JSON.stringify({ ...d, savedAt });
+    lastWrittenAt.current = savedAt;
+    let ok = false;
+    try {
+      localStorage.setItem(KEY, json);
+      ok = localStorage.getItem(KEY) === json;
+    } catch { ok = false; }
+    kvSet(KEY, json)
+      .then(() => {
+        setSaveState("saved");
+        setLastSaved(new Date());
+        setTimeout(() => setSaveState((s) => (s === "saved" ? "idle" : s)), 1500);
+      })
+      .catch(() => {
+        if (ok) {
           setSaveState("saved");
           setLastSaved(new Date());
           setTimeout(() => setSaveState((s) => (s === "saved" ? "idle" : s)), 1500);
-        })
-        .catch(() => {
-          if (ok) {
-            setSaveState("saved");
-            setLastSaved(new Date());
-            setTimeout(() => setSaveState((s) => (s === "saved" ? "idle" : s)), 1500);
-          } else setSaveState("error");
-        });
-      if (!ok) {
-        // localStorage failed — the IDB write above is the safety net; if it also
-        // failed the catch branch shows the error state.
-      }
+        } else setSaveState("error");
+      });
+  }, []);
+
+  // Debounced save for normal typing…
+  useEffect(() => {
+    if (!loadedRef.current || data === null) return;
+    setSaveState("saving");
+    pendingRef.current = true;
+    clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      pendingRef.current = false;
+      persistNow(data);
     }, 500);
     return () => clearTimeout(saveTimer.current);
-  }, [data]);
+  }, [data, persistNow]);
+
+  // …but NEVER let a pending save die with the page. iOS suspends PWAs the
+  // moment they background — "add food, lock phone" must not lose the food.
+  useEffect(() => {
+    const flush = () => {
+      if (!pendingRef.current || dataRef.current === null) return;
+      clearTimeout(saveTimer.current);
+      pendingRef.current = false;
+      persistNow(dataRef.current);
+    };
+    const onVis = () => {
+      if (document.visibilityState === "hidden") flush();
+      else if (!pendingRef.current) {
+        // On resume, adopt a newer copy written by another tab/instance.
+        const stored = safeParse((() => { try { return localStorage.getItem(KEY); } catch { return null; } })());
+        if (stored?.savedAt && stored.savedAt > lastWrittenAt.current) {
+          lastWrittenAt.current = stored.savedAt;
+          setData(migrate(stored));
+        }
+      }
+    };
+    window.addEventListener("pagehide", flush);
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      window.removeEventListener("pagehide", flush);
+      document.removeEventListener("visibilitychange", onVis);
+    };
+  }, [persistNow]);
 
   const update = useCallback((fn) => setData((d) => (d === null ? d : fn(d))), []);
 

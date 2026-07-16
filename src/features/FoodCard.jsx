@@ -43,12 +43,14 @@ export default function FoodCard({ data, day, setDay, update, dateKey }) {
   const [protDraft, setProtDraft] = useState("");
   const [bundleName, setBundleName] = useState(null); // null = closed, "" = naming
 
+  const [showAll, setShowAll] = useState(false);
   const foods = data.foods || [];
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return [...foods].sort((a, b) => (b.lastUsed || 0) - (a.lastUsed || 0)).slice(0, 6);
-    return foods.filter((f) => f.name.toLowerCase().includes(q)).slice(0, 8);
-  }, [foods, query]);
+    if (q) return foods.filter((f) => f.name.toLowerCase().includes(q)).slice(0, 12);
+    if (showAll) return [...foods].sort((a, b) => a.name.localeCompare(b.name));
+    return [...foods].sort((a, b) => (b.lastUsed || 0) - (a.lastUsed || 0)).slice(0, 6);
+  }, [foods, query, showAll]);
 
   const yesterday = mealsOf(data.days[keyPlus(dateKey, -1)]);
   const gap = useMemo(
@@ -309,6 +311,13 @@ export default function FoodCard({ data, day, setDay, update, dateKey }) {
               ))}
               {query.trim() && results.length === 0 && (
                 <div style={{ fontSize: 13, color: "var(--dim)", padding: "4px 0 8px" }}>Nothing named “{query.trim()}” yet.</div>
+              )}
+              {!query.trim() && foods.length > 6 && (
+                <button
+                  style={{ width: "100%", padding: "8px 0", fontSize: 13, fontWeight: 700, color: "var(--fuel)", textAlign: "center" }}
+                  onClick={() => setShowAll((s) => !s)}>
+                  {showAll ? "Show recent only ▴" : `Show all ${foods.length} foods (A–Z) ▾`}
+                </button>
               )}
               <button className="btn" style={{ width: "100%", marginTop: 8, fontWeight: 700 }} onClick={openNew}>
                 + New food {query.trim() ? `“${query.trim()}”` : ""}
