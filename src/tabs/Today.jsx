@@ -103,7 +103,15 @@ export default function Today({ data, update, goTo }) {
               }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: active ? "var(--on-accent)" : "var(--dim)", textTransform: "uppercase" }}>{shortDay(k)}</div>
               <div className="display" style={{ fontSize: 17, fontWeight: 700, color: active ? "var(--on-accent)" : "var(--text)" }}>{k.slice(8)}</div>
-              <div style={{ height: 5 }}>{hasLog && !active && <div style={{ width: 5, height: 5, borderRadius: 3, background: "var(--good)", margin: "0 auto" }} />}</div>
+              <div style={{ height: 12 }}>
+                {hasLog ? (
+                  !active && <div style={{ width: 5, height: 5, borderRadius: 3, background: "var(--good)", margin: "3px auto 0" }} />
+                ) : (data.schedule || {})[k] ? (
+                  <div style={{ fontSize: 10, fontWeight: 800, color: active ? "var(--on-accent)" : (data.schedule[k] === "run" ? "var(--ember)" : "var(--fuel)") }}>
+                    {data.schedule[k] === "run" ? "R" : data.schedule[k]}
+                  </div>
+                ) : null}
+              </div>
             </button>
           );
         })}

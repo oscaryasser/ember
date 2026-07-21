@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
-import { STRENGTH } from "../plan.js";
+import { STRENGTH, sessionList, substitutesFor, movementLabel } from "../plan.js";
 import { num, round1, sanitizeDecimal, sanitizeInt } from "../lib/util.js";
 import { lastSetsFor, buildSetPatch } from "../lib/strength.js";
-import { plateBreakdown, warmupRamp } from "../lib/plates.js";
+import { plateBreakdown, warmupRamp, BAR } from "../lib/plates.js";
 import { fmtClock } from "../lib/dates.js";
 import { unlockAudio, cues } from "../lib/audio.js";
 import { keepAwake, releaseAwake } from "../lib/wakeLock.js";
@@ -14,7 +14,8 @@ export default function GymMode({ id, data, day, setDay, dateKey, onClose }) {
   const modeKey = "mode" + id;
   const mode = day[modeKey] || "home";
   const custom = ((data.custom || {})[id] || {})[mode] || [];
-  const list = [...STRENGTH[id][mode], ...custom];
+  const base = sessionList(STRENGTH, day, id, mode);
+  const list = [...base, ...custom];
   const { startRest, restRemaining, restActive, addRest, stopRest } = useRestTimer();
 
   const [idx, setIdx] = useState(0);
@@ -23,6 +24,16 @@ export default function GymMode({ id, data, day, setDay, dateKey, onClose }) {
   const [pr, setPr] = useState(null);
   const [prs, setPrs] = useState([]);
   const [ended, setEnded] = useState(false);
+  const [swapOpen, setSwapOpen] = useState(false);
+  const [warmDone, setWarmDone] = useState({}); // "idx-step" → true
+
+  const goTo = (i) => { setIdx(i); setWDraft(""); setRDraft(""); setSwapOpen(false); };
+  const setSwap = (i, val) => {
+    const forId = { ...((day.swaps || {})[id] || {}) };
+    if (val === null) delete forId[i]; else forId[i] = val;
+    setDay({ swaps: { ...(day.swaps || {}), [id]: forId } });
+    setSwapOpen(false);
+  };
 
   useMemo(() => { keepAwake(); }, []);
   const close = () => { releaseAwake(); onClose(); };
@@ -37,7 +48,9 @@ export default function GymMode({ id, data, day, setDay, dateKey, onClose }) {
 
   const wNum = num(wDraft) ?? (todaySets.length ? todaySets[todaySets.length - 1].w : lastTopW || null);
   const plates = plateBreakdown(wNum);
-  const ramp = todaySets.length === 0 && lastTopW > 55 ? warmupRamp(lastTopW) : null;
+  const onBase = idx < base.length;
+  const ramp = todaySets.length === 0 && (wNum || 0) > BAR + 10 ? warmupRamp(wNum) : null;
+  const subs = swapOpen && onBase ? substitutesFor(exName, mode) : null;
 
   const totalSets = Object.values((day.sets || {})[id] || {}).reduce((a, s) => a + s.length, 0);
   const volume = Object.values((day.sets || {})[id] || {}).reduce((a, s) => a + s.reduce((x, y) => x + (y.w || 0) * y.r, 0), 0);
@@ -85,14 +98,34 @@ export default function GymMode({ id, data, day, setDay, dateKey, onClose }) {
           {/* exercise pager */}
           <div className="row" style={{ justifyContent: "center", gap: 6 }}>
             {list.map((_, i) => (
-              <button key={i} onClick={() => { setIdx(i); setWDraft(""); setRDraft(""); }} aria-label={`Exercise ${i + 1}`}
+              <button key={i} onClick={() => goTo(i)} aria-label={`Exercise ${i + 1}`}
                 style={{ width: 10, height: 10, borderRadius: 5, background: i === idx ? "var(--fuel)" : ((day.checks || {})[id] || [])[i] ? "var(--good)" : "var(--card2)", border: "1px solid var(--line)" }} />
             ))}
           </div>
           <div style={{ textAlign: "center" }}>
             <div className="display" style={{ fontSize: 27, fontWeight: 700, lineHeight: 1.2 }}>{exName}</div>
             <div style={{ fontSize: 14, color: "var(--dim)" }}>{scheme}{custom.includes(ex) ? " · yours" : ""}</div>
+            {onBase && (
+              <button className="btn ghost" style={{ marginTop: 6, fontSize: 13, color: swapOpen ? "var(--fuel)" : "var(--dim)" }}
+                onClick={() => setSwapOpen((o) => !o)}>⇄ Swap exercise</button>
+            )}
           </div>
+          {subs && (
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontSize: 12, color: "var(--dim)", marginBottom: 6 }}>
+                {movementLabel(exName) ? `Same muscle (${movementLabel(exName)}):` : "Alternatives:"}
+              </div>
+              <div className="row" style={{ justifyContent: "center", gap: 6, flexWrap: "wrap" }}>
+                {subs.map((s) => (
+                  <button key={s} className="btn" style={{ fontSize: 13, fontWeight: 600 }}
+                    onClick={() => setSwap(idx, s)}>{s.split("—")[0].trim()}</button>
+                ))}
+                {((day.swaps || {})[id] || {})[idx] !== undefined && (
+                  <button className="btn ghost" style={{ fontSize: 13 }} onClick={() => setSwap(idx, null)}>↺ Reset</button>
+                )}
+              </div>
+            </div>
+          )}
 
           {last ? (
             <div style={{ textAlign: "center", fontSize: 14, color: "var(--dim)" }}>
@@ -104,8 +137,22 @@ export default function GymMode({ id, data, day, setDay, dateKey, onClose }) {
           )}
 
           {ramp && (
-            <div style={{ textAlign: "center", fontSize: 13, color: "var(--fuel)", fontWeight: 600 }}>
-              Warm-up: {ramp.map((s) => `${s.label} ${s.w}×${s.r}`).join(" → ")} → work
+            <div style={{ textAlign: "center" }}>
+              <div className="field-label" style={{ textAlign: "center" }}>Warm-up sets · tap as you go</div>
+              <div className="row" style={{ justifyContent: "center", gap: 6, flexWrap: "wrap" }}>
+                {ramp.map((s, si) => {
+                  const wkey = `${idx}-${si}`;
+                  const wdone = !!warmDone[wkey];
+                  return (
+                    <button key={si} className="btn"
+                      onClick={() => setWarmDone((w) => ({ ...w, [wkey]: !wdone }))}
+                      style={wdone ? { background: "var(--good)", color: "var(--on-accent)", borderColor: "var(--good)", fontWeight: 700 } : { fontWeight: 700 }}>
+                      {wdone ? "✓ " : ""}{s.w}×{s.r}
+                    </button>
+                  );
+                })}
+                <span style={{ alignSelf: "center", fontSize: 12, color: "var(--dim)" }}>→ work</span>
+              </div>
             </div>
           )}
 
@@ -158,8 +205,8 @@ export default function GymMode({ id, data, day, setDay, dateKey, onClose }) {
           )}
 
           <div className="row" style={{ gap: 8 }}>
-            <button className="btn grow" disabled={idx === 0} onClick={() => { setIdx(idx - 1); setWDraft(""); setRDraft(""); }}>← Prev</button>
-            <button className="btn grow" disabled={idx >= list.length - 1} onClick={() => { setIdx(idx + 1); setWDraft(""); setRDraft(""); }}>Next →</button>
+            <button className="btn grow" disabled={idx === 0} onClick={() => goTo(idx - 1)}>← Prev</button>
+            <button className="btn grow" disabled={idx >= list.length - 1} onClick={() => goTo(idx + 1)}>Next →</button>
           </div>
         </div>
       ) : (

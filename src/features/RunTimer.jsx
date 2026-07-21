@@ -17,12 +17,16 @@ const Step = ({ label, value, onChange, min, max, inc = 1, unit }) => (
   </div>
 );
 
+// Bright accents on dark segment backgrounds — high contrast even for the
+// blue walk/warmup states (the old cyan-on-navy was hard to read mid-run).
 const SEG_STYLE = {
-  jog:    { bg: "#3d1d08", accent: "var(--ember)", verb: "JOG" },
-  walk:   { bg: "#0e2833", accent: "var(--fuel)",  verb: "WALK" },
-  warmup: { bg: "#131720", accent: "var(--fuel)",  verb: "WARM UP · WALK" },
-  cool:   { bg: "#131720", accent: "var(--fuel)",  verb: "COOL DOWN · WALK" },
+  jog:    { bg: "#3a1c07", accent: "#ff9a4d", verb: "JOG" },
+  walk:   { bg: "#0b2b38", accent: "#63d3ec", verb: "WALK" },
+  warmup: { bg: "#1b2130", accent: "#a7bcd2", verb: "WARM UP · WALK" },
+  cool:   { bg: "#1b2130", accent: "#a7bcd2", verb: "COOL DOWN · WALK" },
 };
+const LIGHT = "#eef2f7";
+const DIM_ON_DARK = "rgba(255,255,255,0.66)";
 
 // Locate the active segment for an elapsed time.
 function locate(segments, elapsed) {
@@ -49,6 +53,7 @@ export default function RunTimer({ week, customCfg, onCustomChange, onComplete, 
 
   const [phase, setPhase] = useState("ready"); // ready | running | paused | done
   const [now, setNow] = useState(0);
+  const [skip, setSkip] = useState(0); // seconds jumped past via the Skip button
   const startedAt = useRef(0);
   const pausedAt = useRef(0);
   const pausedTotal = useRef(0);
@@ -57,7 +62,7 @@ export default function RunTimer({ week, customCfg, onCustomChange, onComplete, 
   const doneFired = useRef(false);
 
   const elapsed = phase === "ready" ? 0
-    : (phase === "paused" ? pausedAt.current : now) / 1000 - startedAt.current / 1000 - pausedTotal.current / 1000;
+    : (phase === "paused" ? pausedAt.current : now) / 1000 - startedAt.current / 1000 - pausedTotal.current / 1000 + skip;
   const loc = locate(segments, Math.max(0, elapsed));
   const seg = segments[Math.min(loc.i, segments.length - 1)];
   const finished = phase === "done";
@@ -109,8 +114,15 @@ export default function RunTimer({ week, customCfg, onCustomChange, onComplete, 
     startedAt.current = Date.now();
     pausedTotal.current = 0;
     lastSeg.current = -1;
+    setSkip(0);
     setNow(Date.now());
     setPhase("running");
+  };
+  // Jump to the end of the current segment (skip warmup, a walk, a recovery…).
+  const skipSegment = () => {
+    unlockAudio();
+    setSkip((s) => s + Math.ceil(loc.remaining) + 0.01);
+    setNow(Date.now());
   };
   const pause = () => { pausedAt.current = Date.now(); setPhase("paused"); };
   const resume = () => {
@@ -198,37 +210,47 @@ export default function RunTimer({ week, customCfg, onCustomChange, onComplete, 
       )}
 
       {(phase === "running" || phase === "paused") && seg && (
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", textAlign: "center", gap: 8 }}>
-          <div className="display" style={{ fontSize: 26, fontWeight: 700, color: style.accent, letterSpacing: "0.08em" }}>
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", textAlign: "center", gap: 8, color: LIGHT }}>
+          <div className="display" style={{ fontSize: 30, fontWeight: 700, color: style.accent, letterSpacing: "0.08em" }}>
             {style.verb}
           </div>
-          <div style={{ fontSize: 14, color: "var(--dim)" }}>{seg.label}</div>
-          <div className="display" style={{ fontSize: 96, fontWeight: 700, lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>
+          <div style={{ fontSize: 14, color: DIM_ON_DARK }}>{seg.label}</div>
+          <div className="display" style={{ fontSize: 96, fontWeight: 700, lineHeight: 1, fontVariantNumeric: "tabular-nums", color: LIGHT }}>
             {fmtClock(loc.remaining)}
           </div>
           {next ? (
-            <div style={{ fontSize: 14, color: "var(--dim)" }}>
-              Next: <b style={{ color: "var(--text)" }}>{next.label}</b> · {fmtClock(next.secs)}
+            <div style={{ display: "inline-flex", alignSelf: "center", alignItems: "center", gap: 8, padding: "6px 14px", borderRadius: 999, background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.32)" }}>
+              <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.1em", color: "rgba(255,255,255,0.72)" }}>NEXT</span>
+              <span style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}>{next.label} · {fmtClock(next.secs)}</span>
             </div>
           ) : (
-            <div style={{ fontSize: 14, color: "var(--dim)" }}>Last segment — bring it home</div>
+            <div style={{ fontSize: 14, color: DIM_ON_DARK }}>Last segment — bring it home</div>
           )}
           <div style={{ margin: "18px 0 6px" }}>
-            <div style={{ background: "rgba(255,255,255,0.12)", borderRadius: 6, height: 8, overflow: "hidden" }}>
+            <div style={{ background: "rgba(255,255,255,0.16)", borderRadius: 6, height: 8, overflow: "hidden" }}>
               <div style={{ width: `${progress * 100}%`, height: "100%", background: style.accent, borderRadius: 6, transition: "width 0.3s linear" }} />
             </div>
-            <div className="row" style={{ justifyContent: "space-between", marginTop: 6, fontSize: 12, color: "var(--dim)" }}>
+            <div className="row" style={{ justifyContent: "space-between", marginTop: 6, fontSize: 12, color: DIM_ON_DARK }}>
               <span>{fmtClock(elapsed)}</span>
-              <span>−{fmtClock(total - elapsed)}</span>
+              <span>−{fmtClock(Math.max(0, total - elapsed))}</span>
             </div>
           </div>
-          <button
-            className="btn"
-            style={{ padding: "14px 0", fontSize: 17, borderRadius: 14 }}
-            onClick={phase === "running" ? pause : resume}
-          >
-            {phase === "running" ? "❚❚ Pause" : "▶ Resume"}
-          </button>
+          <div className="row" style={{ gap: 10 }}>
+            <button
+              className="btn grow"
+              style={{ padding: "14px 0", fontSize: 17, borderRadius: 14, background: "rgba(255,255,255,0.14)", color: "#fff", borderColor: "rgba(255,255,255,0.28)" }}
+              onClick={phase === "running" ? pause : resume}
+            >
+              {phase === "running" ? "❚❚ Pause" : "▶ Resume"}
+            </button>
+            <button
+              className="btn grow"
+              style={{ padding: "14px 0", fontSize: 17, borderRadius: 14, background: "rgba(255,255,255,0.14)", color: "#fff", borderColor: "rgba(255,255,255,0.28)" }}
+              onClick={skipSegment}
+            >
+              Skip ▸
+            </button>
+          </div>
         </div>
       )}
 

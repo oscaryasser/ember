@@ -69,6 +69,7 @@ export function mergeImport(current, imported) {
     }
     merged.foods = [...byId.values()];
   }
+  if (imported.schedule && typeof imported.schedule === "object") merged.schedule = { ...current.schedule, ...imported.schedule };
   if (imported.goals) merged.goals = { ...current.goals, ...imported.goals };
   if (imported.targetWeight && !imported.goals) {
     merged.goals = { ...merged.goals, targetWeight: imported.targetWeight };

@@ -103,6 +103,7 @@ export function sanitizeDay(d) {
       .filter((v) => v !== null && v > 0);
   }
   if (d.measurements !== undefined && (typeof d.measurements !== "object" || d.measurements === null)) delete out.measurements;
+  if (d.swaps !== undefined && (typeof d.swaps !== "object" || d.swaps === null || Array.isArray(d.swaps))) delete out.swaps;
   if (d.meals !== undefined) {
     out.meals = (Array.isArray(d.meals) ? d.meals : [])
       .filter((m) => m && typeof m === "object" && !Array.isArray(m))

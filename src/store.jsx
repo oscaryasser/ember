@@ -47,6 +47,9 @@ function migrate(parsed) {
     runWeek: d.runWeek || 1,
     runAck: d.runAck || {},
     custom: d.custom || {},
+    schedule: d.schedule && typeof d.schedule === "object" && !Array.isArray(d.schedule)
+      ? Object.fromEntries(Object.entries(d.schedule).filter(([, v]) => ["run", "A", "B"].includes(v)))
+      : {},
     foods: Array.isArray(d.foods) ? d.foods.filter((f) => f && typeof f === "object" && typeof f.name === "string") : [],
     customRun: d.customRun && typeof d.customRun === "object" ? d.customRun : null,
     goals: { ...DEFAULT_GOALS, ...(d.goals || {}), ...(!d.goals && d.targetWeight ? { targetWeight: d.targetWeight } : {}) },

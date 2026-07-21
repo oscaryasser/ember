@@ -66,7 +66,7 @@ export default function App() {
         </div>
 
         {tab === "today" && <Today data={data} update={update} goTo={setTab} />}
-        {tab === "plan" && <Plan data={data} />}
+        {tab === "plan" && <Plan data={data} update={update} />}
         {tab === "coach" && <Coach data={data} />}
         {tab === "progress" && <Progress data={data} update={update} />}
         {tab === "goals" && <Goals data={data} update={update} saveState={saveState} lastSaved={lastSaved} />}

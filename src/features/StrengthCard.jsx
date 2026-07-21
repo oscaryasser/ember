@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { STRENGTH } from "../plan.js";
+import { STRENGTH, substitutesFor, sessionList, movementLabel } from "../plan.js";
 import { Card, Check, Seg, SectionLabel } from "../components/ui.jsx";
 import { num, round1, sanitizeDecimal, sanitizeInt } from "../lib/util.js";
 import { lastSetsFor, buildSetPatch } from "../lib/strength.js";
+import { warmupRamp, BAR } from "../lib/plates.js";
 import { unlockAudio, cues } from "../lib/audio.js";
 import { useRestTimer } from "./RestTimer.jsx";
 import GymMode from "./GymMode.jsx";
@@ -13,14 +14,25 @@ export default function StrengthCard({ id, data, day, setDay, update, dateKey })
   const [pr, setPr] = useState(null);
   const [gymOpen, setGymOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [swapFor, setSwapFor] = useState(null); // base index whose subs are open
   const { startRest } = useRestTimer();
 
   const modeKey = "mode" + id;
   const mode = day[modeKey] || "home";
   const custom = ((data.custom || {})[id] || {})[mode] || [];
-  const list = [...STRENGTH[id][mode], ...custom];
+  const base = sessionList(STRENGTH, day, id, mode);
+  const baseLen = base.length;
+  const list = [...base, ...custom];
   const checks = (day.checks || {})[id] || [];
   const draft = drafts["new"] || "";
+
+  const setSwap = (i, val) => {
+    const forId = { ...((day.swaps || {})[id] || {}) };
+    if (val === null) delete forId[i]; else forId[i] = val;
+    setDay({ swaps: { ...(day.swaps || {}), [id]: forId } });
+    setSwapFor(null);
+  };
+  const isSwapped = (i) => ((day.swaps || {})[id] || {})[i] !== undefined;
 
   // Done-collapse: every exercise checked → shrink to the green summary line.
   const allDone = list.length > 0 && list.every((_, i) => checks[i]);
@@ -92,15 +104,18 @@ export default function StrengthCard({ id, data, day, setDay, update, dateKey })
       )}
 
       {list.map((ex, i) => {
-        const isCustom = i >= STRENGTH[id][mode].length;
+        const isCustom = i >= baseLen;
         const exName = ex.split("—")[0].trim();
         const rowKey = `${id}-${i}`;
         const todaySets = ((day.sets || {})[id] || {})[exName] || [];
         const open = openSets[rowKey] !== undefined ? openSets[rowKey] : todaySets.length > 0;
         const last = lastSetsFor(data, id, exName, dateKey);
         const lastMaxReps = last ? Math.max(...last.sets.map((s) => s.r)) : 0;
+        const lastTopW = last ? Math.max(...last.sets.map((s) => s.w || 0)) : 0;
+        const warm = lastTopW > BAR + 10 ? warmupRamp(lastTopW) : null;
         const wDraft = drafts["w-" + rowKey] || "";
         const rDraft = drafts["r-" + rowKey] || "";
+        const subs = !isCustom && swapFor === i ? substitutesFor(exName, mode) : null;
 
         const addSet = () => {
           const wv = num(wDraft), rv = num(rDraft);
@@ -132,12 +147,18 @@ export default function StrengthCard({ id, data, day, setDay, update, dateKey })
                 <span style={{ fontSize: 15, color: checks[i] ? "var(--dim)" : "var(--text)", textDecoration: checks[i] ? "line-through" : "none" }}>
                   {ex}
                   {isCustom && <span style={{ fontSize: 11, color: "var(--dim)", fontWeight: 700, marginLeft: 6 }}>MINE</span>}
+                  {isSwapped(i) && <span style={{ fontSize: 11, color: "var(--fuel)", fontWeight: 700, marginLeft: 6 }}>SWAPPED</span>}
                 </span>
               </button>
+              {!isCustom && (
+                <button style={{ color: swapFor === i ? "var(--fuel)" : "var(--dim)", fontSize: 15, padding: "0 5px" }}
+                  title="Swap exercise" aria-label={`Swap ${exName}`}
+                  onClick={() => setSwapFor(swapFor === i ? null : i)}>⇄</button>
+              )}
               {isCustom && (
                 <button style={{ color: "var(--dim)", fontSize: 15, padding: "0 4px" }} title="Remove exercise"
                   aria-label={`Remove ${exName}`}
-                  onClick={() => removeCustom(i - STRENGTH[id][mode].length)}>×</button>
+                  onClick={() => removeCustom(i - baseLen)}>×</button>
               )}
               <button
                 onClick={() => setOpenSets((s) => ({ ...s, [rowKey]: !open }))}
@@ -146,12 +167,34 @@ export default function StrengthCard({ id, data, day, setDay, update, dateKey })
               </button>
             </div>
 
+            {subs && (
+              <div style={{ padding: "0 4px 10px 34px" }}>
+                <div style={{ fontSize: 12, color: "var(--dim)", marginBottom: 6 }}>
+                  Swap {movementLabel(exName) ? `(${movementLabel(exName)})` : ""} — same muscle, different equipment:
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {substitutesFor(exName, mode).map((s) => (
+                    <button key={s} className="btn" style={{ fontSize: 13, fontWeight: 600 }}
+                      onClick={() => setSwap(i, s)}>{s.split("—")[0].trim()}</button>
+                  ))}
+                  {isSwapped(i) && (
+                    <button className="btn ghost" style={{ fontSize: 13 }} onClick={() => setSwap(i, null)}>↺ Reset</button>
+                  )}
+                </div>
+              </div>
+            )}
+
             {open && (
               <div style={{ padding: "0 4px 12px 34px" }}>
                 {last && (
                   <div style={{ fontSize: 13, color: "var(--dim)", marginBottom: 6 }}>
                     Last ({last.k.slice(5)}): {last.sets.map((s) => `${s.w ? s.w + "×" : ""}${s.r}`).join(", ")}
                     {lastMaxReps >= 12 && <span style={{ color: "var(--good)", fontWeight: 700 }}> → hit 12, go up</span>}
+                  </div>
+                )}
+                {warm && (
+                  <div style={{ fontSize: 12, color: "var(--fuel)", marginBottom: 8 }}>
+                    Warm-up: {warm.map((s) => `${s.w}×${s.r}`).join(" → ")} → work sets
                   </div>
                 )}
                 {todaySets.length > 0 && (

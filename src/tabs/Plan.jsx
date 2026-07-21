@@ -1,7 +1,8 @@
 import { Card, SectionLabel } from "../components/ui.jsx";
 import { RUN_WEEKS, STRENGTH } from "../plan.js";
+import WeekPlanner from "../features/WeekPlanner.jsx";
 
-export default function Plan({ data }) {
+export default function Plan({ data, update }) {
   const goals = data.goals;
   return (
     <div className="fade-in">
@@ -12,6 +13,8 @@ export default function Plan({ data }) {
           Rules of thumb: keep ~48h between runs, alternate A and B, and if you stack a run + lift on one day, lift first or split morning/evening.
         </div>
       </Card>
+
+      {update && <WeekPlanner data={data} update={update} />}
 
       <Card style={{ marginTop: 12 }}>
         <SectionLabel color="var(--ember)">Zero → 30 min running · 10 weeks</SectionLabel>

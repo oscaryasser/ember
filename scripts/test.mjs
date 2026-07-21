@@ -1,6 +1,7 @@
 // Node unit tests for the pure logic. Run with: npm test
 import assert from "node:assert/strict";
 import { buildRunSegments, buildCustomSegments, totalSecs, RUN_WEEKS } from "../src/plan.js";
+import { buildStrength, substitutesFor, sessionList, movementOf, PROGRAM } from "../src/lib/exercises.js";
 import { plateBreakdown, warmupRamp } from "../src/lib/plates.js";
 import { recompCheck } from "../src/lib/recomp.js";
 import { adaptationCheck, gapSuggestions } from "../src/lib/adaptive.js";
@@ -252,6 +253,50 @@ test("warm-up ramp: bar → 50% → 70%, rounded to 5s", () => {
   const ramp = warmupRamp(200);
   assert.deepEqual(ramp.map((s) => s.w), [45, 100, 140]);
   assert.equal(warmupRamp(50).length, 1); // too light to ramp
+});
+
+console.log("exercise catalog + swaps");
+test("buildStrength: 5-exercise push/pull, home + gym, scheme suffix", () => {
+  const S = buildStrength();
+  assert.equal(S.A.gym.length, 5);
+  assert.equal(S.B.home.length, 5);
+  assert.match(S.A.name, /Push/);
+  assert.match(S.B.name, /Pull/);
+  assert.ok(S.A.gym[0].includes("—"), "has scheme suffix");
+  assert.equal(PROGRAM.A.movements[0], "squat");
+});
+test("substitutesFor: up to 5 same-pattern, same-equipment alternatives", () => {
+  const subs = substitutesFor("Leg press", "gym");
+  assert.ok(subs.length >= 3 && subs.length <= 5);
+  assert.ok(!subs.some((s) => s.startsWith("Leg press")), "excludes itself");
+  assert.ok(subs.every((s) => s.includes("—")));
+  // home subs differ from gym subs
+  assert.ok(substitutesFor("Chest press machine", "gym").some((s) => s.startsWith("Dumbbell bench")));
+  assert.equal(substitutesFor("Not a real exercise", "gym").length, 0);
+});
+test("movementOf resolves both default and substitute names", () => {
+  assert.equal(movementOf("Lat pulldown"), "vertPull");
+  assert.equal(movementOf("Band-assisted pull-up"), "vertPull");
+});
+test("sessionList applies per-day swaps by index", () => {
+  const S = buildStrength();
+  const day = { swaps: { A: { 0: "Hack squat — 3 × 8–12" } } };
+  const list = sessionList(S, day, "A", "gym");
+  assert.ok(list[0].startsWith("Hack squat"));
+  assert.equal(list[1], S.A.gym[1]); // untouched
+  assert.deepEqual(sessionList(S, {}, "A", "gym"), S.A.gym); // no swaps → defaults
+});
+
+console.log("scheduled suggestion");
+test("planned session for today overrides the inferred suggestion", () => {
+  const wk = weekKeys(todayKey());
+  const withPlan = (act) => ({ days: {}, goals: GOALS, runWeek: 4, schedule: { [todayKey()]: act } });
+  assert.equal(suggestTraining(withPlan("A"), todayKey()).act, "A");
+  assert.equal(suggestTraining(withPlan("run"), todayKey()).act, "run");
+  assert.match(suggestTraining(withPlan("B"), todayKey()).why, /plan/i);
+  // once today is logged, no suggestion even if planned
+  const logged = { days: { [todayKey()]: { activities: ["run"] } }, goals: GOALS, runWeek: 4, schedule: { [todayKey()]: "A" } };
+  assert.equal(suggestTraining(logged, todayKey()), null);
 });
 
 console.log("recomp check");

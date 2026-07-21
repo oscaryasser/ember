@@ -69,38 +69,11 @@ export function buildCustomSegments(cfg) {
 
 export const totalSecs = (segs) => segs.reduce((a, s) => a + s.secs, 0);
 
-export const STRENGTH = {
-  A: {
-    name: "Strength A · Push focus",
-    home: [
-      "Weight-vest squats — 3 × 8–12",
-      "Weight-vest push-ups — 3 × 8–12",
-      "Band-assisted pull-ups (or band rows) — 3 × 8–12",
-      "Plank — 3 × 30–45 sec",
-    ],
-    gym: [
-      "Leg press or goblet squat — 3 × 8–12",
-      "Chest press machine / DB bench — 3 × 8–12",
-      "Lat pulldown — 3 × 8–12",
-      "Cable crunch — 3 × 12–15",
-    ],
-  },
-  B: {
-    name: "Strength B · Hinge & pull focus",
-    home: [
-      "Banded RDL or vest good-mornings — 3 × 8–12",
-      "Pike push-ups or band overhead press — 3 × 8–12",
-      "Band rows — 3 × 10–15",
-      "Weight-vest lunges — 3 × 8–10 / leg",
-    ],
-    gym: [
-      "Dumbbell Romanian deadlift — 3 × 8–12",
-      "Shoulder press machine / DB press — 3 × 8–12",
-      "Seated cable row — 3 × 8–12",
-      "Walking lunges — 3 × 8–10 / leg",
-    ],
-  },
-};
+// A/B templates now come from the movement catalog (push / pull split with
+// per-exercise substitutions). Re-exported here so existing imports keep working.
+export { substitutesFor, sessionList, movementLabel, MOVEMENTS, PROGRAM } from "./lib/exercises.js";
+import { buildStrength } from "./lib/exercises.js";
+export const STRENGTH = buildStrength();
 
 export const MEASUREMENT_FIELDS = [
   { id: "waist", label: "Waist" },

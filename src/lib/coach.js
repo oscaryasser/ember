@@ -88,6 +88,11 @@ export function suggestTraining(data, dateKey) {
   const today = data.days[dateKey];
   if (today && (today.activities || []).length > 0) return null;
 
+  // A planned session for today wins over the inferred suggestion.
+  const planned = (data.schedule || {})[dateKey];
+  if (planned === "run") return { act: "run", label: `Run · Week ${data.runWeek}`, why: "On your plan for today" };
+  if (planned === "A" || planned === "B") return { act: planned, label: `Strength ${planned}`, why: "On your plan for today" };
+
   const s = weekStatsFor(data, dateKey);
   const runsLeft = Math.max(0, g.weeklyRuns - s.runs);
   const strengthLeft = Math.max(0, g.weeklyStrength - s.strength);
