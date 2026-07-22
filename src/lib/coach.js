@@ -1,6 +1,10 @@
 import { keyOffset, weekKeys, keyPlus } from "./dates.js";
 import { netOf, num, proteinOf, hasAnyLog } from "./util.js";
 import { weekPullupDays, weekPullupReps, pullupStarted } from "./pullups.js";
+import { STRENGTH_DAYS, STRENGTH_META } from "./exercises.js";
+
+// Legacy A/B still count as strength for any old logged days.
+const STRENGTH_IDS = [...STRENGTH_DAYS, "A", "B"];
 
 export function weekStatsFor(data, dateKey) {
   const wk = weekKeys(dateKey);
@@ -9,8 +13,7 @@ export function weekStatsFor(data, dateKey) {
     const dd = data.days[k];
     if (!dd) return;
     if (dd.activities?.includes("run")) runs++;
-    if (dd.activities?.includes("A")) strength++;
-    if (dd.activities?.includes("B")) strength++;
+    STRENGTH_IDS.forEach((id) => { if (dd.activities?.includes(id)) strength++; });
     const n = netOf(dd);
     if (n !== null) { deficit += -n; logged++; }
   });
@@ -91,7 +94,7 @@ export function suggestTraining(data, dateKey) {
   // A planned session for today wins over the inferred suggestion.
   const planned = (data.schedule || {})[dateKey];
   if (planned === "run") return { act: "run", label: `Run · Week ${data.runWeek}`, why: "On your plan for today" };
-  if (planned === "A" || planned === "B") return { act: planned, label: `Strength ${planned}`, why: "On your plan for today" };
+  if (STRENGTH_META[planned]) return { act: planned, label: STRENGTH_META[planned].label, why: "On your plan for today" };
 
   const s = weekStatsFor(data, dateKey);
   const runsLeft = Math.max(0, g.weeklyRuns - s.runs);
@@ -105,8 +108,6 @@ export function suggestTraining(data, dateKey) {
     return null;
   };
   const sinceRun = daysSince((d) => (d.activities || []).includes("run"));
-  const sinceA = daysSince((d) => (d.activities || []).includes("A"));
-  const sinceB = daysSince((d) => (d.activities || []).includes("B"));
   const ago = (n, label) => (n === null ? `no ${label} yet` : n === 1 ? `${label} yesterday` : `${label} ${n}d ago`);
 
   if (runsLeft === 0 && strengthLeft === 0) {
@@ -120,9 +121,11 @@ export function suggestTraining(data, dateKey) {
     return { act: null, label: "Rest day", why: "ran yesterday and strength is done — tendons want the 48h" };
   }
   if (strengthLeft > 0) {
-    // alternate: pick the one done longer ago (never-done counts as longest)
-    const pick = (sinceA ?? 99) >= (sinceB ?? 99) ? "A" : "B";
-    return { act: pick, label: `Strength ${pick}`, why: `${ago(pick === "A" ? sinceA : sinceB, pick)} · ${ago(sinceRun, "last run")}` };
+    // Rotate Push → Pull → Legs: pick the day trained longest ago (never = longest).
+    const since = Object.fromEntries(STRENGTH_DAYS.map((id) => [id, daysSince((d) => (d.activities || []).includes(id)) ?? 999]));
+    const pick = STRENGTH_DAYS.reduce((a, b) => (since[b] > since[a] ? b : a), STRENGTH_DAYS[0]);
+    const done = daysSince((d) => (d.activities || []).includes(pick));
+    return { act: pick, label: STRENGTH_META[pick].label, why: `${ago(done, STRENGTH_META[pick].label.toLowerCase())} · ${ago(sinceRun, "last run")}` };
   }
   return null;
 }

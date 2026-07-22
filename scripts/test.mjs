@@ -255,48 +255,57 @@ test("warm-up ramp: bar → 50% → 70%, rounded to 5s", () => {
   assert.equal(warmupRamp(50).length, 1); // too light to ramp
 });
 
-console.log("exercise catalog + swaps");
-test("buildStrength: 5-exercise push/pull, home + gym, scheme suffix", () => {
+console.log("exercise catalog (push/pull/legs) + swaps");
+test("buildStrength: 3-day PPL, 5 exercises each, scheme suffix", () => {
   const S = buildStrength();
-  assert.equal(S.A.gym.length, 5);
-  assert.equal(S.B.home.length, 5);
-  assert.match(S.A.name, /Push/);
-  assert.match(S.B.name, /Pull/);
-  assert.ok(S.A.gym[0].includes("—"), "has scheme suffix");
-  assert.equal(PROGRAM.A.movements[0], "squat");
+  assert.deepEqual(Object.keys(S), ["P", "U", "L"]);
+  assert.equal(S.P.gym.length, 5);
+  assert.equal(S.L.home.length, 5);
+  assert.match(S.P.name, /Push/);
+  assert.match(S.U.name, /Pull/);
+  assert.match(S.L.name, /Legs/);
+  assert.ok(S.P.gym[0].includes("—"), "has scheme suffix");
+  assert.equal(PROGRAM.L.movements[0], "squat");
+  assert.equal(PROGRAM.P.movements[0], "horizPush");
 });
 test("substitutesFor: up to 5 same-pattern, same-equipment alternatives", () => {
   const subs = substitutesFor("Leg press", "gym");
   assert.ok(subs.length >= 3 && subs.length <= 5);
   assert.ok(!subs.some((s) => s.startsWith("Leg press")), "excludes itself");
   assert.ok(subs.every((s) => s.includes("—")));
-  // home subs differ from gym subs
   assert.ok(substitutesFor("Chest press machine", "gym").some((s) => s.startsWith("Dumbbell bench")));
   assert.equal(substitutesFor("Not a real exercise", "gym").length, 0);
 });
-test("movementOf resolves both default and substitute names", () => {
-  assert.equal(movementOf("Lat pulldown"), "vertPull");
-  assert.equal(movementOf("Band-assisted pull-up"), "vertPull");
+test("new movements resolve: incline, lateral, hammer, lunge, calves", () => {
+  assert.equal(movementOf("Incline dumbbell press"), "inclinePush");
+  assert.equal(movementOf("Dumbbell lateral raise"), "lateralRaise");
+  assert.equal(movementOf("Hammer curl"), "hammer");
+  assert.equal(movementOf("Walking lunge"), "lunge");
+  assert.equal(movementOf("Standing calf raise"), "calves");
 });
 test("sessionList applies per-day swaps by index", () => {
   const S = buildStrength();
-  const day = { swaps: { A: { 0: "Hack squat — 3 × 8–12" } } };
-  const list = sessionList(S, day, "A", "gym");
+  const day = { swaps: { L: { 0: "Hack squat — 3 × 8–12" } } };
+  const list = sessionList(S, day, "L", "gym");
   assert.ok(list[0].startsWith("Hack squat"));
-  assert.equal(list[1], S.A.gym[1]); // untouched
-  assert.deepEqual(sessionList(S, {}, "A", "gym"), S.A.gym); // no swaps → defaults
+  assert.equal(list[1], S.L.gym[1]); // untouched
+  assert.deepEqual(sessionList(S, {}, "L", "gym"), S.L.gym); // no swaps → defaults
 });
 
 console.log("scheduled suggestion");
 test("planned session for today overrides the inferred suggestion", () => {
-  const wk = weekKeys(todayKey());
   const withPlan = (act) => ({ days: {}, goals: GOALS, runWeek: 4, schedule: { [todayKey()]: act } });
-  assert.equal(suggestTraining(withPlan("A"), todayKey()).act, "A");
+  assert.equal(suggestTraining(withPlan("P"), todayKey()).act, "P");
+  assert.equal(suggestTraining(withPlan("L"), todayKey()).label, "Legs");
   assert.equal(suggestTraining(withPlan("run"), todayKey()).act, "run");
-  assert.match(suggestTraining(withPlan("B"), todayKey()).why, /plan/i);
-  // once today is logged, no suggestion even if planned
-  const logged = { days: { [todayKey()]: { activities: ["run"] } }, goals: GOALS, runWeek: 4, schedule: { [todayKey()]: "A" } };
+  assert.match(suggestTraining(withPlan("U"), todayKey()).why, /plan/i);
+  const logged = { days: { [todayKey()]: { activities: ["run"] } }, goals: GOALS, runWeek: 4, schedule: { [todayKey()]: "P" } };
   assert.equal(suggestTraining(logged, todayKey()), null);
+});
+test("legacy A/B activities still count as strength for old logs", () => {
+  const wk = weekKeys(todayKey());
+  const days = { [wk[0]]: { activities: ["A"] }, [wk[1]]: { activities: ["B"] } };
+  assert.equal(weekStatsFor({ days }, todayKey()).strength, 2);
 });
 
 console.log("recomp check");
@@ -376,30 +385,32 @@ console.log("training suggestion + heatmap");
 const anchor = fixedWeek[3]; // Thursday
 const sData = (days) => ({ days, goals: GOALS, runWeek: 4 });
 test("suggests a run when 48h+ since the last one", () => {
-  const days = { [fixedWeek[0]]: { activities: ["A"] }, [fixedWeek[1]]: { activities: ["run"] } }; // run 2d before anchor
+  const days = { [fixedWeek[0]]: { activities: ["P"] }, [fixedWeek[1]]: { activities: ["run"] } }; // run 2d before anchor
   const s = suggestTraining(sData(days), anchor);
   assert.equal(s.act, "run");
   assert.match(s.label, /Week 4/);
 });
-test("suggests strength (alternating to the older letter) when run was yesterday", () => {
-  const days = { [fixedWeek[0]]: { activities: ["A"] }, [fixedWeek[2]]: { activities: ["run"] } }; // run 1d before anchor
+test("rotates Push → Pull → Legs by longest-ago when run was yesterday", () => {
+  // Push done 3d ago, run 1d ago → not a run day, strength left → pick the day trained longest ago (Pull/Legs never → first)
+  const days = { [fixedWeek[0]]: { activities: ["P"] }, [fixedWeek[2]]: { activities: ["run"] } };
   const s = suggestTraining(sData(days), anchor);
-  assert.equal(s.act, "B"); // A was done, B never → B is "older"
+  assert.equal(s.act, "U"); // P was done, U/L never → U is first of the tied "never"
+  assert.equal(s.label, "Pull");
 });
 test("rest day when ran yesterday and strength is done", () => {
   const days = {
-    [fixedWeek[0]]: { activities: ["A"] },
-    [fixedWeek[1]]: { activities: ["B"] },
+    [fixedWeek[0]]: { activities: ["P"] },
+    [fixedWeek[1]]: { activities: ["U"] },
     [fixedWeek[2]]: { activities: ["run"] },
   };
-  const s = suggestTraining(sData(days), anchor);
+  const s = suggestTraining(sData(days), anchor); // weeklyStrength 2 in GOALS → target met
   assert.equal(s.act, null);
   assert.match(s.label, /Rest/);
 });
 test("week complete once both targets are hit", () => {
   const days = {
-    [fixedWeek[0]]: { activities: ["run", "A"] },
-    [fixedWeek[1]]: { activities: ["B"] },
+    [fixedWeek[0]]: { activities: ["run", "P"] },
+    [fixedWeek[1]]: { activities: ["U"] },
     [fixedWeek[2]]: { activities: ["run"] },
   };
   assert.match(suggestTraining(sData(days), anchor).label, /Week complete/);

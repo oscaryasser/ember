@@ -3,6 +3,7 @@ import { Card, SectionLabel, Chip } from "../components/ui.jsx";
 import { num, netOf, sanitizeDecimal } from "../lib/util.js";
 import { todayKey, keyOffset, shortDay, niceDate } from "../lib/dates.js";
 import { weekStatsFor, suggestTraining } from "../lib/coach.js";
+import { STRENGTH_DAYS, STRENGTH_META } from "../plan.js";
 import HeroRing from "../features/HeroRing.jsx";
 import { getDay, patchDay } from "../store.jsx";
 import StrengthCard from "../features/StrengthCard.jsx";
@@ -107,8 +108,8 @@ export default function Today({ data, update, goTo }) {
                 {hasLog ? (
                   !active && <div style={{ width: 5, height: 5, borderRadius: 3, background: "var(--good)", margin: "3px auto 0" }} />
                 ) : (data.schedule || {})[k] ? (
-                  <div style={{ fontSize: 10, fontWeight: 800, color: active ? "var(--on-accent)" : (data.schedule[k] === "run" ? "var(--ember)" : "var(--fuel)") }}>
-                    {data.schedule[k] === "run" ? "R" : data.schedule[k]}
+                  <div style={{ fontSize: 10, fontWeight: 800, color: active ? "var(--on-accent)" : (data.schedule[k] === "run" ? "var(--ember)" : (STRENGTH_META[data.schedule[k]]?.color || "var(--fuel)")) }}>
+                    {data.schedule[k] === "run" ? "R" : (STRENGTH_META[data.schedule[k]]?.letter || data.schedule[k])}
                   </div>
                 ) : null}
               </div>
@@ -179,18 +180,22 @@ export default function Today({ data, update, goTo }) {
       </SectionLabel>
       <div className="chips">
         <Chip active={day.activities.includes("run")} color="var(--ember)" onClick={() => toggleActivity("run")}>🏃 Run</Chip>
-        <Chip active={day.activities.includes("A")} color="var(--fuel)" onClick={() => toggleActivity("A")}>Strength A</Chip>
-        <Chip active={day.activities.includes("B")} color="var(--fuel)" onClick={() => toggleActivity("B")}>Strength B</Chip>
+        {STRENGTH_DAYS.map((id) => (
+          <Chip key={id} active={day.activities.includes(id)} color={STRENGTH_META[id].color} onClick={() => toggleActivity(id)}>
+            {STRENGTH_META[id].label}
+          </Chip>
+        ))}
       </div>
       {day.activities.length === 0 && (
         <div style={{ fontSize: 13, color: "var(--dim)", marginTop: 8 }}>
-          Rest day is a valid choice — you need ~3 of them a week. Weekly target: {goals.weeklyRuns} runs + {goals.weeklyStrength} strength, any days, any order.
+          Rest day is a valid choice — you need ~3 of them a week. Weekly target: {goals.weeklyRuns} runs + {goals.weeklyStrength} lifts (Push / Pull / Legs), any days, any order.
         </div>
       )}
 
       {day.activities.includes("run") && <RunCard data={data} day={day} setDay={setDay} update={update} dateKey={dateKey} />}
-      {day.activities.includes("A") && <StrengthCard id="A" data={data} day={day} setDay={setDay} update={update} dateKey={dateKey} />}
-      {day.activities.includes("B") && <StrengthCard id="B" data={data} day={day} setDay={setDay} update={update} dateKey={dateKey} />}
+      {STRENGTH_DAYS.filter((id) => day.activities.includes(id)).map((id) => (
+        <StrengthCard key={id} id={id} data={data} day={day} setDay={setDay} update={update} dateKey={dateKey} />
+      ))}
 
       <PullupCard data={data} day={day} setDay={setDay} dateKey={dateKey} goals={goals} />
       <FoodCard data={data} day={day} setDay={setDay} update={update} dateKey={dateKey} />

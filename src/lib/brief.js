@@ -6,6 +6,9 @@ import { estimateTDEE, resolveTargets, adaptationCheck } from "./adaptive.js";
 import { coachVerdict } from "./coach.js";
 import { recompCheck } from "./recomp.js";
 import { testHistory, GRIPS, pullupDayKeys, pullupVolume } from "./pullups.js";
+import { STRENGTH_DAYS } from "./exercises.js";
+
+const LIFT_IDS = [...STRENGTH_DAYS, "A", "B"]; // include legacy A/B days
 
 const DAYS = 28;
 
@@ -28,7 +31,7 @@ export function buildCoachBrief(data) {
     const sl = sleepTotalOf(d);
     if (sl !== null) { sleepDays++; sleepSum += sl; }
     if (d?.activities?.includes("run")) runs++;
-    if (d?.activities?.includes("A") || d?.activities?.includes("B")) lifts++;
+    if (LIFT_IDS.some((id) => d?.activities?.includes(id))) lifts++;
     const w = num(d?.weight);
     if (w !== null) weights.push({ i, w });
     if ((d?.pullups?.sets || []).length) { pullDays++; pullReps += pullupVolume(d); }

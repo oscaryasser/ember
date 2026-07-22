@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState, useCal
 import { kvGet, kvSet } from "./lib/idb.js";
 import { todayKey } from "./lib/dates.js";
 import { sanitizeDay, safeParse, pickFresher } from "./lib/util.js";
+import { STRENGTH_DAYS } from "./lib/exercises.js";
 
 const KEY = "ember:data:v1";
 
@@ -12,7 +13,7 @@ export const DEFAULT_GOALS = {
   sleepHours: 7,       // h/night
   targetWeight: "",    // lbs
   weeklyRuns: 2,
-  weeklyStrength: 2,
+  weeklyStrength: 3,
   maxLossPct: 1.5,     // % bodyweight per week — faster than this burns muscle
   restSecs: 90,        // strength rest timer
   pullupDays: 5,       // grease-the-groove days per week
@@ -48,7 +49,10 @@ function migrate(parsed) {
     runAck: d.runAck || {},
     custom: d.custom || {},
     schedule: d.schedule && typeof d.schedule === "object" && !Array.isArray(d.schedule)
-      ? Object.fromEntries(Object.entries(d.schedule).filter(([, v]) => ["run", "A", "B"].includes(v)))
+      ? Object.fromEntries(Object.entries(d.schedule).filter(([, v]) => ["run", ...STRENGTH_DAYS].includes(v)))
+      : {},
+    hidden: d.hidden && typeof d.hidden === "object" && !Array.isArray(d.hidden)
+      ? Object.fromEntries(Object.entries(d.hidden).map(([k, v]) => [k, Array.isArray(v) ? v.filter((n) => Number.isInteger(n)) : []]))
       : {},
     foods: Array.isArray(d.foods) ? d.foods.filter((f) => f && typeof f === "object" && typeof f.name === "string") : [],
     customRun: d.customRun && typeof d.customRun === "object" ? d.customRun : null,

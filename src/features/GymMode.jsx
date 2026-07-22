@@ -10,7 +10,7 @@ import { useRestTimer } from "./RestTimer.jsx";
 
 // Gym Mode: one exercise at a time, huge targets, the rest timer and plate
 // math on-screen — the run timer's philosophy applied to lifting.
-export default function GymMode({ id, data, day, setDay, dateKey, onClose }) {
+export default function GymMode({ id, data, day, setDay, update, dateKey, onClose }) {
   const modeKey = "mode" + id;
   const mode = day[modeKey] || "home";
   const custom = ((data.custom || {})[id] || {})[mode] || [];
@@ -34,11 +34,22 @@ export default function GymMode({ id, data, day, setDay, dateKey, onClose }) {
     setDay({ swaps: { ...(day.swaps || {}), [id]: forId } });
     setSwapOpen(false);
   };
+  const removeExercise = (i) => update?.((d) => {
+    const c = (d.hidden || {})[id] || [];
+    return { ...d, hidden: { ...(d.hidden || {}), [id]: [...new Set([...c, i])] } };
+  });
 
   useMemo(() => { keepAwake(); }, []);
   const close = () => { releaseAwake(); onClose(); };
 
-  const ex = list[Math.min(idx, list.length - 1)];
+  // Skip removed (hidden) base exercises: page over the visible list, but keep
+  // each item's original index for checks/sets/swaps.
+  const hidden = (data.hidden || {})[id] || [];
+  const visible = list.map((ex, i) => ({ ex, i, isCustom: i >= base.length })).filter((v) => v.isCustom || !hidden.includes(v.i));
+  const pos = Math.min(idx, Math.max(0, visible.length - 1));
+  const cur = visible[pos] || { ex: list[0] || "—", i: 0, isCustom: false };
+  const ex = cur.ex;
+  const origIdx = cur.i;
   const exName = ex.split("—")[0].trim();
   const scheme = ex.split("—")[1]?.trim() || "";
   const todaySets = ((day.sets || {})[id] || {})[exName] || [];
@@ -48,7 +59,7 @@ export default function GymMode({ id, data, day, setDay, dateKey, onClose }) {
 
   const wNum = num(wDraft) ?? (todaySets.length ? todaySets[todaySets.length - 1].w : lastTopW || null);
   const plates = plateBreakdown(wNum);
-  const onBase = idx < base.length;
+  const onBase = !cur.isCustom;
   const ramp = todaySets.length === 0 && (wNum || 0) > BAR + 10 ? warmupRamp(wNum) : null;
   const subs = swapOpen && onBase ? substitutesFor(exName, mode) : null;
 
@@ -62,7 +73,7 @@ export default function GymMode({ id, data, day, setDay, dateKey, onClose }) {
     const { sets, pr: hit } = buildSetPatch(data, day, dateKey, id, exName, wNum, rv);
     const checks = { ...(day.checks || {}) };
     const arr = [...(checks[id] || [])];
-    arr[idx] = true;
+    arr[origIdx] = true;
     checks[id] = arr;
     setDay({ sets, checks });
     setRDraft("");
@@ -97,17 +108,21 @@ export default function GymMode({ id, data, day, setDay, dateKey, onClose }) {
         <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", gap: 14 }}>
           {/* exercise pager */}
           <div className="row" style={{ justifyContent: "center", gap: 6 }}>
-            {list.map((_, i) => (
-              <button key={i} onClick={() => goTo(i)} aria-label={`Exercise ${i + 1}`}
-                style={{ width: 10, height: 10, borderRadius: 5, background: i === idx ? "var(--fuel)" : ((day.checks || {})[id] || [])[i] ? "var(--good)" : "var(--card2)", border: "1px solid var(--line)" }} />
+            {visible.map((v, p) => (
+              <button key={v.i} onClick={() => goTo(p)} aria-label={`Exercise ${p + 1}`}
+                style={{ width: 10, height: 10, borderRadius: 5, background: p === pos ? "var(--fuel)" : ((day.checks || {})[id] || [])[v.i] ? "var(--good)" : "var(--card2)", border: "1px solid var(--line)" }} />
             ))}
           </div>
           <div style={{ textAlign: "center" }}>
             <div className="display" style={{ fontSize: 27, fontWeight: 700, lineHeight: 1.2 }}>{exName}</div>
             <div style={{ fontSize: 14, color: "var(--dim)" }}>{scheme}{custom.includes(ex) ? " · yours" : ""}</div>
             {onBase && (
-              <button className="btn ghost" style={{ marginTop: 6, fontSize: 13, color: swapOpen ? "var(--fuel)" : "var(--dim)" }}
-                onClick={() => setSwapOpen((o) => !o)}>⇄ Swap exercise</button>
+              <div className="row" style={{ justifyContent: "center", gap: 10, marginTop: 6 }}>
+                <button className="btn ghost" style={{ fontSize: 13, color: swapOpen ? "var(--fuel)" : "var(--dim)" }}
+                  onClick={() => setSwapOpen((o) => !o)}>⇄ Swap</button>
+                <button className="btn ghost" style={{ fontSize: 13, color: "var(--dim)" }}
+                  onClick={() => removeExercise(origIdx)}>🗑 Remove</button>
+              </div>
             )}
           </div>
           {subs && (
@@ -118,10 +133,10 @@ export default function GymMode({ id, data, day, setDay, dateKey, onClose }) {
               <div className="row" style={{ justifyContent: "center", gap: 6, flexWrap: "wrap" }}>
                 {subs.map((s) => (
                   <button key={s} className="btn" style={{ fontSize: 13, fontWeight: 600 }}
-                    onClick={() => setSwap(idx, s)}>{s.split("—")[0].trim()}</button>
+                    onClick={() => setSwap(origIdx, s)}>{s.split("—")[0].trim()}</button>
                 ))}
-                {((day.swaps || {})[id] || {})[idx] !== undefined && (
-                  <button className="btn ghost" style={{ fontSize: 13 }} onClick={() => setSwap(idx, null)}>↺ Reset</button>
+                {((day.swaps || {})[id] || {})[origIdx] !== undefined && (
+                  <button className="btn ghost" style={{ fontSize: 13 }} onClick={() => setSwap(origIdx, null)}>↺ Reset</button>
                 )}
               </div>
             </div>
@@ -141,7 +156,7 @@ export default function GymMode({ id, data, day, setDay, dateKey, onClose }) {
               <div className="field-label" style={{ textAlign: "center" }}>Warm-up sets · tap as you go</div>
               <div className="row" style={{ justifyContent: "center", gap: 6, flexWrap: "wrap" }}>
                 {ramp.map((s, si) => {
-                  const wkey = `${idx}-${si}`;
+                  const wkey = `${origIdx}-${si}`;
                   const wdone = !!warmDone[wkey];
                   return (
                     <button key={si} className="btn"
@@ -205,8 +220,8 @@ export default function GymMode({ id, data, day, setDay, dateKey, onClose }) {
           )}
 
           <div className="row" style={{ gap: 8 }}>
-            <button className="btn grow" disabled={idx === 0} onClick={() => goTo(idx - 1)}>← Prev</button>
-            <button className="btn grow" disabled={idx >= list.length - 1} onClick={() => goTo(idx + 1)}>Next →</button>
+            <button className="btn grow" disabled={pos === 0} onClick={() => goTo(pos - 1)}>← Prev</button>
+            <button className="btn grow" disabled={pos >= visible.length - 1} onClick={() => goTo(pos + 1)}>Next →</button>
           </div>
         </div>
       ) : (

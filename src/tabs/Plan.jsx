@@ -1,5 +1,5 @@
 import { Card, SectionLabel } from "../components/ui.jsx";
-import { RUN_WEEKS, STRENGTH } from "../plan.js";
+import { RUN_WEEKS, STRENGTH, STRENGTH_DAYS, STRENGTH_META } from "../plan.js";
 import WeekPlanner from "../features/WeekPlanner.jsx";
 
 export default function Plan({ data, update }) {
@@ -10,7 +10,7 @@ export default function Plan({ data, update }) {
         <SectionLabel color="var(--ember)">How this plan flexes</SectionLabel>
         <div style={{ fontSize: 15, lineHeight: 1.55 }}>
           No fixed days. Hit <b>{goals.weeklyRuns} runs + {goals.weeklyStrength} strength sessions per week</b>, in any order.
-          Rules of thumb: keep ~48h between runs, alternate A and B, and if you stack a run + lift on one day, lift first or split morning/evening.
+          Rules of thumb: keep ~48h between runs, rotate Push → Pull → Legs, and if you stack a run + lift on one day, lift first or split morning/evening.
         </div>
       </Card>
 
@@ -35,31 +35,37 @@ export default function Plan({ data, update }) {
         </div>
       </Card>
 
-      {["A", "B"].map((id) => (
-        <Card key={id} style={{ marginTop: 12 }}>
-          <SectionLabel color="var(--fuel)">{STRENGTH[id].name}</SectionLabel>
-          <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
-            {["home", "gym"].map((m) => (
-              <div key={m} style={{ flex: "1 1 45%", minWidth: 200 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                  {m === "home" ? "🏠 Home (bands + vest)" : "🏋️ Gym"}
-                </div>
-                {[...STRENGTH[id][m], ...(((data.custom || {})[id] || {})[m] || [])].map((ex, i) => (
-                  <div key={i} style={{ fontSize: 13, color: "var(--dim)", padding: "4px 0" }}>
-                    {ex}
-                    {i >= STRENGTH[id][m].length && <span style={{ fontSize: 11, fontWeight: 700, marginLeft: 5 }}>MINE</span>}
+      {STRENGTH_DAYS.map((id) => {
+        const hidden = (data.hidden || {})[id] || [];
+        return (
+          <Card key={id} style={{ marginTop: 12 }}>
+            <SectionLabel color={STRENGTH_META[id].color}>{STRENGTH[id].name}</SectionLabel>
+            <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+              {["home", "gym"].map((m) => (
+                <div key={m} style={{ flex: "1 1 45%", minWidth: 200 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                    {m === "home" ? "🏠 Home (bands + vest)" : "🏋️ Gym"}
                   </div>
-                ))}
-              </div>
-            ))}
-          </div>
-        </Card>
-      ))}
+                  {[...STRENGTH[id][m], ...(((data.custom || {})[id] || {})[m] || [])].map((ex, i) => {
+                    const isBase = i < STRENGTH[id][m].length;
+                    return (
+                      <div key={i} style={{ fontSize: 13, color: "var(--dim)", padding: "4px 0", textDecoration: isBase && hidden.includes(i) ? "line-through" : "none", opacity: isBase && hidden.includes(i) ? 0.5 : 1 }}>
+                        {ex}
+                        {!isBase && <span style={{ fontSize: 11, fontWeight: 700, marginLeft: 5 }}>MINE</span>}
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+          </Card>
+        );
+      })}
 
       <Card style={{ marginTop: 12 }}>
         <SectionLabel color="var(--good)">Pull-up program · grease the groove</SectionLabel>
         <div style={{ fontSize: 15, lineHeight: 1.55, marginBottom: 10 }}>
-          Runs <b>beside</b> the A/B sessions, not inside them — <b>{goals.pullupDays} days a week</b>, easy sets spread
+          Runs <b>beside</b> your lifting sessions, not inside them — <b>{goals.pullupDays} days a week</b>, easy sets spread
           through the day, <b>never to failure</b>. Grips rotate <b>chin → neutral → wide</b> one day each, so every angle
           gets trained and nothing gets overused. Strength grows from frequency, not from grinding.
         </div>

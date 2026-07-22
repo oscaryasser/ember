@@ -71,7 +71,7 @@ export const totalSecs = (segs) => segs.reduce((a, s) => a + s.secs, 0);
 
 // A/B templates now come from the movement catalog (push / pull split with
 // per-exercise substitutions). Re-exported here so existing imports keep working.
-export { substitutesFor, sessionList, movementLabel, MOVEMENTS, PROGRAM } from "./lib/exercises.js";
+export { substitutesFor, sessionList, movementLabel, MOVEMENTS, PROGRAM, STRENGTH_DAYS, STRENGTH_META } from "./lib/exercises.js";
 import { buildStrength } from "./lib/exercises.js";
 export const STRENGTH = buildStrength();
 

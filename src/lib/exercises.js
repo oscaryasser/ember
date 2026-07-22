@@ -52,15 +52,51 @@ export const MOVEMENTS = {
   },
   biceps: {
     label: "Biceps", scheme: "3 × 10–15",
-    gym:  ["Cable curl", "Dumbbell curl", "Hammer curl", "Preacher curl", "Incline dumbbell curl"],
-    home: ["Band curl", "Backpack curl", "Hammer band curl", "Chin-up (biceps)", "Isometric towel curl (time)"],
+    gym:  ["Cable curl", "Dumbbell curl", "Preacher curl", "Incline dumbbell curl", "Concentration curl"],
+    home: ["Band curl", "Backpack curl", "Chin-up (biceps)", "Isometric towel curl (time)", "Vest curl"],
+  },
+  inclinePush: {
+    label: "Incline · upper chest", scheme: "3 × 8–12",
+    gym:  ["Incline dumbbell press", "Incline barbell press", "Incline machine press", "Incline cable fly", "Low-to-high cable fly"],
+    home: ["Decline push-up", "Feet-elevated push-up", "Band low-to-high fly", "Pseudo-planche push-up", "Archer push-up"],
+  },
+  lateralRaise: {
+    label: "Side delts", scheme: "3 × 12–20",
+    gym:  ["Dumbbell lateral raise", "Cable lateral raise", "Machine lateral raise", "Lean-away cable raise", "Leaning dumbbell raise"],
+    home: ["Band lateral raise", "Lean-away band raise", "Water-jug lateral raise", "Vest lateral raise (light)", "Partial-rep raise"],
+  },
+  hammer: {
+    label: "Brachialis / forearms", scheme: "3 × 10–15",
+    gym:  ["Hammer curl", "Cable rope hammer curl", "Reverse curl", "Cross-body hammer curl", "Preacher hammer curl"],
+    home: ["Hammer band curl", "Backpack hammer curl", "Reverse band curl", "Water-jug hammer curl", "Towel hammer hold (time)"],
+  },
+  lunge: {
+    label: "Lunge · unilateral", scheme: "3 × 8–10 / leg",
+    gym:  ["Walking lunge", "Bulgarian split squat", "Reverse lunge", "Dumbbell step-up", "Single-leg leg press"],
+    home: ["Reverse lunge", "Bulgarian split squat", "Vest walking lunge", "Step-up", "Split squat"],
+  },
+  calves: {
+    label: "Calves", scheme: "4 × 12–20",
+    gym:  ["Standing calf raise", "Seated calf raise", "Leg-press calf raise", "Smith calf raise", "Single-leg calf raise"],
+    home: ["Single-leg calf raise", "Vest calf raise", "Stair calf raise", "Double-leg calf raise", "Donkey calf raise"],
   },
 };
 
-// The split: push day, pull day. One lower-body compound each.
+// Push / Pull / Legs. Each day: compound → secondary → isolation, balanced
+// weekly volume. Push = chest/shoulders/triceps, Pull = back/rear-delts/arms,
+// Legs = quads/hams/calves/core.
 export const PROGRAM = {
-  A: { name: "Strength A · Push", movements: ["squat", "horizPush", "vertPush", "triceps", "core"] },
-  B: { name: "Strength B · Pull", movements: ["hinge", "vertPull", "horizPull", "rearDelt", "biceps"] },
+  P: { name: "Push · chest / shoulders / triceps", short: "Push", movements: ["horizPush", "vertPush", "inclinePush", "lateralRaise", "triceps"] },
+  U: { name: "Pull · back / rear delts / arms", short: "Pull", movements: ["vertPull", "horizPull", "rearDelt", "biceps", "hammer"] },
+  L: { name: "Legs · quads / hams / calves / core", short: "Legs", movements: ["squat", "hinge", "lunge", "calves", "core"] },
+};
+
+// One source of truth for the strength-day ids and their chips/badges.
+export const STRENGTH_DAYS = Object.keys(PROGRAM); // ["P","U","L"]
+export const STRENGTH_META = {
+  P: { letter: "P", label: "Push", color: "var(--fuel)" },
+  U: { letter: "U", label: "Pull", color: "var(--good)" },
+  L: { letter: "L", label: "Legs", color: "#b58cf0" },
 };
 
 const withScheme = (name, mv) => `${name} — ${mv.scheme}`;

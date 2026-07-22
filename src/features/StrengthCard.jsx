@@ -34,8 +34,17 @@ export default function StrengthCard({ id, data, day, setDay, update, dateKey })
   };
   const isSwapped = (i) => ((day.swaps || {})[id] || {})[i] !== undefined;
 
-  // Done-collapse: every exercise checked → shrink to the green summary line.
-  const allDone = list.length > 0 && list.every((_, i) => checks[i]);
+  // Persistent per-day-type removal of a recommended exercise (data-level, so
+  // it stays gone across days). Reversible via Restore.
+  const hidden = (data.hidden || {})[id] || [];
+  const setHidden = (i, on) => update((d) => {
+    const cur = (d.hidden || {})[id] || [];
+    const next = on ? [...new Set([...cur, i])] : cur.filter((x) => x !== i);
+    return { ...d, hidden: { ...(d.hidden || {}), [id]: next } };
+  });
+
+  // Done-collapse: every visible exercise checked → shrink to the green line.
+  const allDone = list.length > 0 && list.every((_, i) => hidden.includes(i) || checks[i]);
   const setCount = Object.values((day.sets || {})[id] || {}).reduce((a, s) => a + s.length, 0);
   if (allDone && !expanded && !gymOpen) {
     return (
@@ -90,7 +99,7 @@ export default function StrengthCard({ id, data, day, setDay, update, dateKey })
         </div>
       )}
       {gymOpen && (
-        <GymMode id={id} data={data} day={day} setDay={setDay} dateKey={dateKey} onClose={() => setGymOpen(false)} />
+        <GymMode id={id} data={data} day={day} setDay={setDay} update={update} dateKey={dateKey} onClose={() => setGymOpen(false)} />
       )}
       <div className="row" style={{ justifyContent: "space-between", marginBottom: 10 }}>
         <div className="display" style={{ fontSize: 19, fontWeight: 700 }}>{STRENGTH[id].name}</div>
@@ -139,6 +148,15 @@ export default function StrengthCard({ id, data, day, setDay, update, dateKey })
           setDay({ sets });
         };
 
+        if (!isCustom && hidden.includes(i)) {
+          return (
+            <div key={rowKey} className="row" style={{ borderTop: i ? "1px solid var(--line)" : "none", padding: "8px 4px", justifyContent: "space-between" }}>
+              <span style={{ fontSize: 13, color: "var(--dim)", textDecoration: "line-through" }}>{exName} · removed</span>
+              <button className="btn ghost" style={{ fontSize: 12, color: "var(--fuel)" }} onClick={() => setHidden(i, false)}>↺ Restore</button>
+            </div>
+          );
+        }
+
         return (
           <div key={rowKey} style={{ borderTop: i ? "1px solid var(--line)" : "none" }}>
             <div className="row" style={{ padding: "10px 4px" }}>
@@ -154,6 +172,11 @@ export default function StrengthCard({ id, data, day, setDay, update, dateKey })
                 <button style={{ color: swapFor === i ? "var(--fuel)" : "var(--dim)", fontSize: 15, padding: "0 5px" }}
                   title="Swap exercise" aria-label={`Swap ${exName}`}
                   onClick={() => setSwapFor(swapFor === i ? null : i)}>⇄</button>
+              )}
+              {!isCustom && (
+                <button style={{ color: "var(--dim)", fontSize: 14, padding: "0 5px" }}
+                  title="Remove exercise" aria-label={`Remove ${exName}`}
+                  onClick={() => setHidden(i, true)}>🗑</button>
               )}
               {isCustom && (
                 <button style={{ color: "var(--dim)", fontSize: 15, padding: "0 4px" }} title="Remove exercise"

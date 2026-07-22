@@ -1,13 +1,13 @@
 import { Card, SectionLabel } from "../components/ui.jsx";
 import { weekKeys, keyPlus, todayKey, shortDay } from "../lib/dates.js";
+import { STRENGTH_DAYS, STRENGTH_META } from "../plan.js";
 
-// Tap-to-plan weekly schedule: cycle each day none → run → A → B. Planned
-// sessions surface on the Today date strip and drive the suggestion chip.
-const CYCLE = [undefined, "run", "A", "B"];
+// Tap-to-plan weekly schedule: cycle each day none → run → Push → Pull → Legs.
+// Planned sessions surface on the Today date strip and drive the suggestion chip.
+const CYCLE = [undefined, "run", ...STRENGTH_DAYS];
 const META = {
   run: { letter: "R", color: "var(--ember)", label: "Run" },
-  A: { letter: "A", color: "var(--fuel)", label: "Strength A" },
-  B: { letter: "B", color: "var(--good)", label: "Strength B" },
+  ...Object.fromEntries(STRENGTH_DAYS.map((id) => [id, STRENGTH_META[id]])),
 };
 
 export default function WeekPlanner({ data, update }) {
@@ -75,7 +75,7 @@ export default function WeekPlanner({ data, update }) {
     <Card style={{ marginTop: 12 }}>
       <SectionLabel color="var(--ember)">Plan your week</SectionLabel>
       <div style={{ fontSize: 13, color: "var(--dim)", marginBottom: 4 }}>
-        Tap a day to cycle: <b style={{ color: "var(--ember)" }}>R</b>un → <b style={{ color: "var(--fuel)" }}>A</b> → <b style={{ color: "var(--good)" }}>B</b> → off.
+        Tap a day to cycle: <b style={{ color: "var(--ember)" }}>R</b>un → <b style={{ color: "var(--fuel)" }}>P</b>ush → <b style={{ color: "var(--good)" }}>P</b>ull → <b style={{ color: "#b58cf0" }}>L</b>egs → off.
         Planned sessions show on Today and drive the coach's suggestion.
       </div>
       {weekRow(thisWeek, "This week")}

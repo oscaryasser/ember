@@ -14,10 +14,12 @@ export function exerciseHistory(data, exName) {
   return out.sort((a, b) => (a.k < b.k ? -1 : 1));
 }
 
+// Scan every strength-day bucket (P/U/L now, legacy A/B still present in old
+// logs) so history stays continuous across a program change.
 function collectSets(day, exName) {
   const res = [];
-  for (const id of ["A", "B"]) {
-    const s = day?.sets?.[id]?.[exName];
+  for (const id of Object.keys(day?.sets || {})) {
+    const s = day.sets[id]?.[exName];
     if (s && s.length) res.push(...s);
   }
   return res;
@@ -27,8 +29,8 @@ function collectSets(day, exName) {
 export function loggedExercises(data) {
   const map = new Map();
   for (const day of Object.values(data.days)) {
-    for (const id of ["A", "B"]) {
-      for (const [name, sets] of Object.entries(day?.sets?.[id] || {})) {
+    for (const id of Object.keys(day?.sets || {})) {
+      for (const [name, sets] of Object.entries(day.sets[id] || {})) {
         if (sets && sets.length) map.set(name, (map.get(name) || 0) + 1);
       }
     }
@@ -62,11 +64,16 @@ export function buildSetPatch(data, day, dateKey, id, exName, w, r) {
   return { sets, pr };
 }
 
+// Most recent prior day this exercise was logged, under any strength-day
+// bucket (so the "last time" hint follows an exercise across program changes).
 export function lastSetsFor(data, id, exName, beforeKey) {
   const keys = Object.keys(data.days).filter((k) => k < beforeKey).sort().reverse();
   for (const k of keys) {
-    const s = data.days[k]?.sets?.[id]?.[exName];
-    if (s && s.length) return { k, sets: s };
+    const buckets = data.days[k]?.sets || {};
+    for (const bid of Object.keys(buckets)) {
+      const s = buckets[bid]?.[exName];
+      if (s && s.length) return { k, sets: s };
+    }
   }
   return null;
 }
