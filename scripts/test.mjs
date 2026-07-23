@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import { buildRunSegments, buildCustomSegments, totalSecs, RUN_WEEKS } from "../src/plan.js";
 import { buildStrength, substitutesFor, sessionList, movementOf, PROGRAM } from "../src/lib/exercises.js";
+import { buildSetPatch, exerciseHistory, lastSetsFor } from "../src/lib/strength.js";
 import { plateBreakdown, warmupRamp } from "../src/lib/plates.js";
 import { recompCheck } from "../src/lib/recomp.js";
 import { adaptationCheck, gapSuggestions } from "../src/lib/adaptive.js";
@@ -290,6 +291,31 @@ test("sessionList applies per-day swaps by index", () => {
   assert.ok(list[0].startsWith("Hack squat"));
   assert.equal(list[1], S.L.gym[1]); // untouched
   assert.deepEqual(sessionList(S, {}, "L", "gym"), S.L.gym); // no swaps → defaults
+});
+
+console.log("warm-up sets");
+test("buildSetPatch warm flag appends a warm-up set and never PRs", () => {
+  const data = { days: { "2026-07-01": { sets: { P: { "Chest press machine": [{ w: 100, r: 8 }] } } } } };
+  const { sets, pr } = buildSetPatch(data, {}, "2026-08-01", "P", "Chest press machine", 999, 10, true);
+  assert.equal(sets.P["Chest press machine"][0].warm, true);
+  assert.equal(pr, null); // huge weight but warm → no PR
+});
+test("warm-up sets excluded from e1RM, topW, and 'last time'", () => {
+  const data = { days: {
+    "2026-07-01": { sets: { P: { Bench: [{ w: 150, r: 8 }] } } },
+    "2026-08-01": { sets: { P: { Bench: [{ w: 95, r: 5, warm: true }, { w: 160, r: 8 }] } } },
+  } };
+  const aug = exerciseHistory(data, "Bench").find((h) => h.k === "2026-08-01");
+  assert.equal(aug.topW, 160); // the warm 95 is ignored
+  assert.ok(aug.best > e1rm(150, 8)); // 160×8 working set is the real best
+  const last = lastSetsFor(data, "P", "Bench", "2026-08-02");
+  assert.ok(last.sets.every((s) => !s.warm) && last.sets.length === 1);
+});
+test("a working set still PRs over history despite warm-ups present", () => {
+  const data = { days: { "2026-07-01": { sets: { P: { Bench: [{ w: 150, r: 8 }] } } } } };
+  const day = { sets: { P: { Bench: [{ w: 95, r: 5, warm: true }] } } };
+  const { pr } = buildSetPatch(data, day, "2026-08-01", "P", "Bench", 165, 8, false);
+  assert.ok(pr && pr.new > pr.old);
 });
 
 console.log("scheduled suggestion");

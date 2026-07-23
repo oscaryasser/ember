@@ -223,7 +223,10 @@ export default function StrengthCard({ id, data, day, setDay, update, dateKey })
                 {todaySets.length > 0 && (
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
                     {todaySets.map((s, si) => (
-                      <div key={si} style={{ background: "var(--card2)", borderRadius: 8, padding: "4px 8px", fontSize: 13, display: "flex", gap: 6, alignItems: "center" }}>
+                      <div key={si} style={{ borderRadius: 8, padding: "4px 8px", fontSize: 13, display: "flex", gap: 6, alignItems: "center",
+                        background: s.warm ? "color-mix(in srgb, var(--ember) 14%, transparent)" : "var(--card2)",
+                        color: s.warm ? "var(--ember)" : "var(--text)" }}>
+                        {s.warm && <span style={{ fontSize: 9, fontWeight: 800 }}>W</span>}
                         {s.w ? `${s.w} × ${s.r}` : `${s.r} reps`}
                         <button onClick={() => removeSet(si)} aria-label={`Remove set ${si + 1}`} style={{ color: "var(--dim)", fontWeight: 700 }}>×</button>
                       </div>

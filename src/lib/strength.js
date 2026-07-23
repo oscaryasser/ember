@@ -15,12 +15,13 @@ export function exerciseHistory(data, exName) {
 }
 
 // Scan every strength-day bucket (P/U/L now, legacy A/B still present in old
-// logs) so history stays continuous across a program change.
+// logs) so history stays continuous across a program change. Warm-up sets
+// (flagged `warm`) are excluded — they never count toward e1RM/PRs/volume.
 function collectSets(day, exName) {
   const res = [];
   for (const id of Object.keys(day?.sets || {})) {
     const s = day.sets[id]?.[exName];
-    if (s && s.length) res.push(...s);
+    if (s && s.length) res.push(...s.filter((x) => !x.warm));
   }
   return res;
 }
@@ -50,13 +51,16 @@ export function bestBefore(data, exName, dateKey) {
 
 // Append a set to a day and detect a PR against real history (shared by the
 // strength card and gym mode so the rules can never drift apart).
-export function buildSetPatch(data, day, dateKey, id, exName, w, r) {
+export function buildSetPatch(data, day, dateKey, id, exName, w, r, warm = false) {
   const todaySets = ((day.sets || {})[id] || {})[exName] || [];
-  const newE1 = e1rm(w ?? 0, r);
-  const prevBest = Math.max(bestBefore(data, exName, dateKey), ...todaySets.map((s) => e1rm(s.w, s.r)), 0);
+  const entry = warm ? { w: w ?? 0, r, warm: true } : { w: w ?? 0, r };
   const sets = { ...(day.sets || {}) };
   sets[id] = { ...(sets[id] || {}) };
-  sets[id][exName] = [...todaySets, { w: w ?? 0, r }];
+  sets[id][exName] = [...todaySets, entry];
+  if (warm) return { sets, pr: null }; // warm-ups never PR
+  const newE1 = e1rm(w ?? 0, r);
+  const workingToday = todaySets.filter((s) => !s.warm);
+  const prevBest = Math.max(bestBefore(data, exName, dateKey), ...workingToday.map((s) => e1rm(s.w, s.r)), 0);
   const hadHistory = lastSetsFor(data, id, exName, dateKey) !== null;
   const pr = hadHistory && prevBest > 0 && newE1 > prevBest
     ? { name: exName, w: w ?? 0, r, new: newE1, old: prevBest }
@@ -71,8 +75,8 @@ export function lastSetsFor(data, id, exName, beforeKey) {
   for (const k of keys) {
     const buckets = data.days[k]?.sets || {};
     for (const bid of Object.keys(buckets)) {
-      const s = buckets[bid]?.[exName];
-      if (s && s.length) return { k, sets: s };
+      const working = (buckets[bid]?.[exName] || []).filter((x) => !x.warm);
+      if (working.length) return { k, sets: working };
     }
   }
   return null;
