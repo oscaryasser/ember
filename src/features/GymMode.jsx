@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { STRENGTH, sessionList, substitutesFor, movementLabel } from "../plan.js";
-import { num, round1, sanitizeDecimal, sanitizeInt } from "../lib/util.js";
-import { lastSetsFor, buildSetPatch } from "../lib/strength.js";
+import { num, round1, e1rm, sanitizeDecimal, sanitizeInt } from "../lib/util.js";
+import { lastSetsFor, buildSetPatch, bestBefore } from "../lib/strength.js";
 import { plateBreakdown, warmupRamp, BAR } from "../lib/plates.js";
 import { fmtClock } from "../lib/dates.js";
 import { unlockAudio, cues } from "../lib/audio.js";
@@ -56,6 +56,8 @@ export default function GymMode({ id, data, day, setDay, update, dateKey, onClos
   const last = lastSetsFor(data, id, exName, dateKey);
   const lastMaxReps = last ? Math.max(...last.sets.map((s) => s.r)) : 0;
   const lastTopW = last ? Math.max(...last.sets.map((s) => s.w || 0)) : 0;
+  const prevSets = last?.sets || [];                  // last session's working sets
+  const bestPrev = bestBefore(data, exName, dateKey); // all-time best e1RM to beat
 
   const wNum = num(wDraft) ?? (workSets.length ? workSets[workSets.length - 1].w : lastTopW || null);
   const plates = plateBreakdown(wNum);
@@ -178,9 +180,32 @@ export default function GymMode({ id, data, day, setDay, update, dateKey, onClos
           )}
 
           {last ? (
-            <div style={{ textAlign: "center", fontSize: 14, color: "var(--dim)" }}>
-              Last ({last.k.slice(5)}): <b style={{ color: "var(--text)" }}>{last.sets.map((s) => `${s.w ? s.w + "×" : ""}${s.r}`).join(", ")}</b>
-              {lastMaxReps >= 12 && <span style={{ color: "var(--good)", fontWeight: 700 }}> → hit 12, go up</span>}
+            <div style={{ background: "var(--card)", border: "1px solid var(--line)", borderRadius: 12, padding: "10px 12px" }}>
+              <div className="row" style={{ justifyContent: "space-between", marginBottom: 6 }}>
+                <span style={{ fontSize: 12, fontWeight: 800, letterSpacing: "0.06em", color: "var(--dim)" }}>LAST TIME · {last.k.slice(5)}</span>
+                {bestPrev > 0 && <span style={{ fontSize: 12, fontWeight: 700, color: "var(--fuel)" }}>best {Math.round(bestPrev)} e1RM</span>}
+              </div>
+              {Array.from({ length: Math.max(prevSets.length, workSets.length) }).map((_, i) => {
+                const p = prevSets[i], t = workSets[i];
+                const pe = p ? e1rm(p.w, p.r) : 0, te = t ? e1rm(t.w, t.r) : 0;
+                const beat = p && t ? (te > pe + 0.01 ? "up" : te < pe - 0.01 ? "down" : "same") : null;
+                return (
+                  <div key={i} className="row" style={{ gap: 8, fontSize: 14, padding: "3px 0", alignItems: "baseline" }}>
+                    <span style={{ width: 20, color: "var(--dim)", fontSize: 12 }}>{i + 1}</span>
+                    <span style={{ width: 74, fontWeight: 700, color: p ? "var(--text)" : "var(--dim)" }}>{p ? `${p.w}×${p.r}` : "—"}</span>
+                    <span style={{ color: "var(--dim)" }}>→</span>
+                    <span style={{ flex: 1, fontWeight: 700, color: t ? "var(--fuel)" : "var(--dim)" }}>{t ? `${t.w}×${t.r}` : "…"}</span>
+                    {beat && (
+                      <span style={{ fontWeight: 800, color: beat === "up" ? "var(--good)" : beat === "down" ? "var(--bad)" : "var(--dim)" }}>
+                        {beat === "up" ? "↑ beat" : beat === "down" ? "↓" : "= tied"}
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+              <div style={{ fontSize: 12, color: lastMaxReps >= 12 ? "var(--good)" : "var(--dim)", marginTop: 4 }}>
+                {lastMaxReps >= 12 ? "Hit 12 last time → add load today." : "Beat it: one more rep or +5 lb on any set."}
+              </div>
             </div>
           ) : (
             <div style={{ textAlign: "center", fontSize: 13, color: "var(--dim)" }}>First time logging this one — pick a weight you can do 10 crisp reps with.</div>
