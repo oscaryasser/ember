@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import Icon from "./components/Icon.jsx";
 import { useStore } from "./store.jsx";
 import { RestTimerProvider } from "./features/RestTimer.jsx";
 import QuickLog from "./features/QuickLog.jsx";
@@ -48,7 +49,7 @@ export default function App() {
       <div className="shell">
         <div className="row" style={{ justifyContent: "space-between", alignItems: "baseline", marginBottom: 14 }}>
           <div>
-            <div className="display" style={{ fontSize: 26, fontWeight: 700 }}>
+            <div className="display" style={{ fontSize: 26, fontWeight: 800, letterSpacing: "-0.5px" }}>
               EMBER<span style={{ color: "var(--ember)" }}>.</span>
             </div>
             <div style={{ fontSize: 11, color: "var(--dim)" }}>
@@ -57,7 +58,10 @@ export default function App() {
           </div>
           <div className="row" style={{ gap: 10 }}>
             {streak > 1 && (
-              <div style={{ fontSize: 13, fontWeight: 800, color: "var(--ember)" }}>🔥{streak}</div>
+              <div className="row" style={{ gap: 4, padding: "4px 10px", borderRadius: 999, background: "color-mix(in srgb, var(--ember) 10%, transparent)", color: "var(--ember)" }}>
+                <Icon name="flame" size={15} strokeWidth={2} />
+                <span style={{ fontSize: 13, fontWeight: 800 }}>{streak}</span>
+              </div>
             )}
             <div style={{ fontSize: 11, color: saveState === "error" ? "var(--bad)" : "var(--dim)", minWidth: 52, textAlign: "right" }}>
               {saveState === "saving" ? "saving…" : saveState === "saved" ? "✓ saved" : saveState === "error" ? "save failed" : ""}

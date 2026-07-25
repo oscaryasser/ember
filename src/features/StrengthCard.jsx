@@ -4,6 +4,8 @@ import { Card, Check, Seg, SectionLabel } from "../components/ui.jsx";
 import { num, round1, sanitizeDecimal, sanitizeInt } from "../lib/util.js";
 import { lastSetsFor, buildSetPatch } from "../lib/strength.js";
 import { warmupRamp, BAR } from "../lib/plates.js";
+import Icon from "../components/Icon.jsx";
+import { fmtClock } from "../lib/dates.js";
 import { unlockAudio, cues } from "../lib/audio.js";
 import { useRestTimer } from "./RestTimer.jsx";
 import GymMode from "./GymMode.jsx";
@@ -52,7 +54,7 @@ export default function StrengthCard({ id, data, day, setDay, update, dateKey })
         <button className="row" style={{ width: "100%", justifyContent: "space-between", textAlign: "left" }} onClick={() => setExpanded(true)}>
           <SectionLabel>{STRENGTH[id].name}</SectionLabel>
           <div style={{ fontSize: 13, fontWeight: 700, color: "var(--good)", marginBottom: 10 }}>
-            ✓ done · {setCount} sets ▾
+            ✓ done · {setCount} sets{num(day.liftSecs) ? ` · ${fmtClock(day.liftSecs)}` : ""} ▾
           </div>
         </button>
       </Card>
@@ -91,7 +93,7 @@ export default function StrengthCard({ id, data, day, setDay, update, dateKey })
     <Card style={{ marginTop: 12 }}>
       {pr && (
         <div className="pr-toast" onClick={() => setPr(null)}>
-          <div style={{ fontSize: 26 }}>🏆</div>
+          <Icon name="trophy" size={26} color="var(--good)" strokeWidth={2} style={{ margin: "0 auto" }} />
           <div className="display" style={{ fontSize: 20, fontWeight: 700, color: "var(--good)" }}>PR — {pr.name}</div>
           <div style={{ fontSize: 13, color: "var(--dim)" }}>
             {pr.w} × {pr.r} → est. 1RM {round1(pr.new)} lbs{pr.old > 0 ? ` (was ${round1(pr.old)})` : ""}
@@ -174,9 +176,9 @@ export default function StrengthCard({ id, data, day, setDay, update, dateKey })
                   onClick={() => setSwapFor(swapFor === i ? null : i)}>⇄</button>
               )}
               {!isCustom && (
-                <button style={{ color: "var(--dim)", fontSize: 14, padding: "0 5px" }}
+                <button style={{ color: "var(--dim)", padding: "0 5px", display: "flex" }}
                   title="Remove exercise" aria-label={`Remove ${exName}`}
-                  onClick={() => setHidden(i, true)}>🗑</button>
+                  onClick={() => setHidden(i, true)}><Icon name="trash" size={16} color="var(--dim)" /></button>
               )}
               {isCustom && (
                 <button style={{ color: "var(--dim)", fontSize: 15, padding: "0 4px" }} title="Remove exercise"

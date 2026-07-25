@@ -4,6 +4,7 @@ import { num, netOf, proteinOf, sleepTotalOf } from "../lib/util.js";
 import { todayKey, keyOffset, shortDay } from "../lib/dates.js";
 import { coachVerdict, logStreak, fullWeekStreak } from "../lib/coach.js";
 import { BalanceBars, Sparkline } from "../components/charts.jsx";
+import Icon from "../components/Icon.jsx";
 import AdaptiveTargets from "../features/AdaptiveTargets.jsx";
 import RecompCheck from "../features/RecompCheck.jsx";
 
@@ -70,14 +71,16 @@ export default function Coach({ data }) {
       {/* streaks */}
       <div className="row" style={{ gap: 10, marginBottom: 12 }}>
         <Card className="grow" style={{ textAlign: "center", padding: 12 }}>
-          <div className="display" style={{ fontSize: 30, fontWeight: 700, color: streakDays > 0 ? "var(--ember)" : "var(--dim)" }}>
-            {streakDays > 0 ? `🔥 ${streakDays}` : "—"}
+          <div className="row" style={{ justifyContent: "center", gap: 6 }}>
+            {streakDays > 0 && <Icon name="flame" size={22} color="var(--ember)" strokeWidth={2} />}
+            <span className="display" style={{ fontSize: 30, fontWeight: 700, color: streakDays > 0 ? "var(--ember)" : "var(--dim)" }}>{streakDays > 0 ? streakDays : "—"}</span>
           </div>
           <div style={{ fontSize: 12, color: "var(--dim)" }}>day logging streak</div>
         </Card>
         <Card className="grow" style={{ textAlign: "center", padding: 12 }}>
-          <div className="display" style={{ fontSize: 30, fontWeight: 700, color: streakWeeks > 0 ? "var(--good)" : "var(--dim)" }}>
-            {streakWeeks > 0 ? `⚡ ${streakWeeks}` : "—"}
+          <div className="row" style={{ justifyContent: "center", gap: 6 }}>
+            {streakWeeks > 0 && <Icon name="bolt" size={22} color="var(--good)" strokeWidth={2} />}
+            <span className="display" style={{ fontSize: 30, fontWeight: 700, color: streakWeeks > 0 ? "var(--good)" : "var(--dim)" }}>{streakWeeks > 0 ? streakWeeks : "—"}</span>
           </div>
           <div style={{ fontSize: 12, color: "var(--dim)" }}>full {goals.weeklyRuns}+{goals.weeklyStrength} weeks in a row</div>
         </Card>

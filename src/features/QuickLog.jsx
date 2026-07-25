@@ -39,7 +39,7 @@ export default function QuickLog({ data, update }) {
     if (num(weightDraft) === null) return;
     setDay({ weight: weightDraft });
     setWeightDraft("");
-    done(`⚖️ ${weightDraft} lbs saved`);
+    done(`${weightDraft} lbs saved`);
   };
 
   const grip = suggestedGrip(data, key);

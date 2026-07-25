@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Card, SectionLabel } from "../components/ui.jsx";
+import Icon from "../components/Icon.jsx";
 import { num, mealsOf, mealTotals, intakeOf, proteinOf, sanitizeDecimal } from "../lib/util.js";
 import { keyPlus } from "../lib/dates.js";
 import { resolveTargets, kcalFromMacros, gapSuggestions } from "../lib/adaptive.js";
@@ -266,8 +267,8 @@ export default function FoodCard({ data, day, setDay, update, dateKey }) {
               ))}
               {meals.length >= 2 && (
                 bundleName === null ? (
-                  <button className="btn" style={{ width: "100%", marginTop: 6, fontSize: 12, fontWeight: 700 }} onClick={() => setBundleName("")}>
-                    📦 Save these {meals.length} as a bundle
+                  <button className="btn row" style={{ width: "100%", marginTop: 6, fontSize: 12, fontWeight: 700, justifyContent: "center", gap: 6 }} onClick={() => setBundleName("")}>
+                    <Icon name="box" size={15} color="var(--dim)" strokeWidth={2} /> Save these {meals.length} as a bundle
                   </button>
                 ) : (
                   <div className="row" style={{ gap: 6, marginTop: 6 }}>
@@ -298,7 +299,8 @@ export default function FoodCard({ data, day, setDay, update, dateKey }) {
               {results.map((f) => (
                 <div key={f.id} className="row" style={{ gap: 8, padding: "7px 0", borderTop: "1px solid var(--line)" }}>
                   <button className="grow row" style={{ textAlign: "left", gap: 8 }} onClick={() => logFood(f)}>
-                    <span style={{ fontSize: 14, fontWeight: 600 }}>{f.bundle ? "📦 " : ""}{f.name}</span>
+                    {f.bundle && <Icon name="box" size={14} color="var(--dim)" strokeWidth={2} />}
+                    <span style={{ fontSize: 14, fontWeight: 600 }}>{f.name}</span>
                     <span style={{ fontSize: 12, color: "var(--dim)" }}>
                       {f.kcal} kcal · {f.p}p{f.bundle ? ` · ${f.items?.length || 0} items` : `/${f.c}c/${f.f}f`}
                     </span>

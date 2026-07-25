@@ -43,7 +43,10 @@ function migrate(parsed) {
   }
   return {
     version: 1,
-    theme: d.theme === "light" ? "light" : "dark",
+    // Light-first redesign (designV 2): flip everyone to light once, then
+    // respect their choice. New installs default to light.
+    theme: d.designV >= 2 ? (d.theme === "dark" ? "dark" : "light") : "light",
+    designV: 2,
     days,
     runWeek: d.runWeek || 1,
     runAck: d.runAck || {},

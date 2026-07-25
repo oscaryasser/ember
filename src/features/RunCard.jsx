@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { RUN_WEEKS } from "../plan.js";
 import { Card } from "../components/ui.jsx";
+import Icon from "../components/Icon.jsx";
 import { num, sanitizeDecimal, round1 } from "../lib/util.js";
 import { keyPlus } from "../lib/dates.js";
 import RunTimer from "./RunTimer.jsx";
@@ -52,8 +53,9 @@ export default function RunCard({ data, day, setDay, update, dateKey }) {
       <div style={{ fontSize: 13, color: "var(--dim)" }}>{rw.cool}. If the week felt hard, repeat it — the plan bends, your shins don't.</div>
 
       {adjacentRun && (
-        <div style={{ marginTop: 10, padding: "8px 10px", borderRadius: 10, background: "color-mix(in srgb, var(--ember) 10%, transparent)", border: "1px solid color-mix(in srgb, var(--ember) 33%, transparent)", fontSize: 13, color: "var(--ember)", fontWeight: 600 }}>
-          ⚠ Back-to-back run days. Fine once in a while, but tendons want ~48h between runs.
+        <div className="row" style={{ marginTop: 10, padding: "8px 10px", borderRadius: 10, background: "color-mix(in srgb, var(--ember) 10%, transparent)", border: "1px solid color-mix(in srgb, var(--ember) 33%, transparent)", fontSize: 13, color: "var(--ember)", fontWeight: 600, gap: 6, alignItems: "flex-start" }}>
+          <Icon name="warning" size={16} color="var(--ember)" strokeWidth={2} style={{ marginTop: 1 }} />
+          <span>Back-to-back run days. Fine once in a while, but tendons want ~48h between runs.</span>
         </div>
       )}
 

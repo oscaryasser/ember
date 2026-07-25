@@ -4,6 +4,7 @@ import { num, netOf, sanitizeDecimal } from "../lib/util.js";
 import { todayKey, keyOffset, shortDay, niceDate } from "../lib/dates.js";
 import { weekStatsFor, suggestTraining } from "../lib/coach.js";
 import { STRENGTH_DAYS, STRENGTH_META } from "../plan.js";
+import Icon from "../components/Icon.jsx";
 import HeroRing from "../features/HeroRing.jsx";
 import { getDay, patchDay } from "../store.jsx";
 import StrengthCard from "../features/StrengthCard.jsx";
@@ -98,9 +99,10 @@ export default function Today({ data, update, goTo }) {
             <button key={k} onClick={() => setDateKey(k)}
               aria-pressed={active} aria-label={niceDate(k)}
               style={{
-                minWidth: 46, textAlign: "center", padding: "8px 4px", borderRadius: 12,
+                flex: 1, minWidth: 0, textAlign: "center", padding: "8px 2px", borderRadius: 13,
                 background: active ? "var(--ember)" : "var(--card)",
                 border: `1px solid ${active ? "var(--ember)" : "var(--line)"}`,
+                boxShadow: active ? "none" : "var(--shadow)",
               }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: active ? "var(--on-accent)" : "var(--dim)", textTransform: "uppercase" }}>{shortDay(k)}</div>
               <div className="display" style={{ fontSize: 17, fontWeight: 700, color: active ? "var(--on-accent)" : "var(--text)" }}>{k.slice(8)}</div>
@@ -123,7 +125,7 @@ export default function Today({ data, update, goTo }) {
 
       {/* weigh-in */}
       <Card style={{ marginBottom: 16, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-        <div style={{ fontSize: 26 }}>⚖️</div>
+        <Icon name="scale" size={26} color="var(--dim)" />
         <div style={{ flex: "1 1 90px", minWidth: 90 }}>
           <div className="field-label">Today's weight</div>
           <input inputMode="decimal" placeholder="lbs" value={day.weight}
@@ -134,7 +136,7 @@ export default function Today({ data, update, goTo }) {
           <div className="field-label" style={{ color: "var(--good)" }}>Target</div>
           <input inputMode="decimal" placeholder="set goal" value={goals.targetWeight || ""}
             onChange={(e) => update((d) => ({ ...d, goals: { ...d.goals, targetWeight: sanitizeDecimal(e.target.value) } }))}
-            style={{ fontSize: 22, padding: "8px 10px", borderColor: "color-mix(in srgb, var(--good) 40%, var(--line))" }} />
+            style={{ fontSize: 22, padding: "8px 10px", borderColor: "color-mix(in srgb, var(--good) 45%, var(--line))", background: "color-mix(in srgb, var(--good) 6%, var(--card2))" }} />
         </div>
         <div style={{ flex: "1 1 100%", fontSize: 13, color: "var(--dim)" }}>
           {(() => {
@@ -162,7 +164,7 @@ export default function Today({ data, update, goTo }) {
               borderRadius: 12, border: "1px solid color-mix(in srgb, var(--ember) 40%, var(--line))",
               background: "color-mix(in srgb, var(--ember) 7%, transparent)",
             }}>
-            <span style={{ fontSize: 18 }}>{sug.act === "run" ? "🏃" : sug.act ? "🏋️" : "🧘"}</span>
+            <Icon name={sug.act === "run" ? "run" : sug.act ? "dumbbell" : "rest"} size={20} color="var(--ember)" strokeWidth={2} />
             <span className="grow">
               <span style={{ fontSize: 14, fontWeight: 800, color: "var(--ember)" }}>{sug.label}</span>
               <span style={{ fontSize: 12, color: "var(--dim)", display: "block" }}>{sug.why}</span>

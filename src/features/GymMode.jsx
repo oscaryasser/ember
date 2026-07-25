@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { STRENGTH, sessionList, substitutesFor, movementLabel } from "../plan.js";
 import { num, round1, e1rm, sanitizeDecimal, sanitizeInt } from "../lib/util.js";
 import { lastSetsFor, buildSetPatch, bestBefore } from "../lib/strength.js";
@@ -7,6 +7,7 @@ import { fmtClock } from "../lib/dates.js";
 import { unlockAudio, cues } from "../lib/audio.js";
 import { keepAwake, releaseAwake } from "../lib/wakeLock.js";
 import { useRestTimer } from "./RestTimer.jsx";
+import Icon from "../components/Icon.jsx";
 
 // Gym Mode: one exercise at a time, huge targets, the rest timer and plate
 // math on-screen — the run timer's philosophy applied to lifting.
@@ -25,6 +26,20 @@ export default function GymMode({ id, data, day, setDay, update, dateKey, onClos
   const [prs, setPrs] = useState([]);
   const [ended, setEnded] = useState(false);
   const [swapOpen, setSwapOpen] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
+  const [addDraft, setAddDraft] = useState("");
+
+  // Session stopwatch — total workout time, live in the header.
+  const startRef = useRef(Date.now());
+  const baseSecsRef = useRef(num(day.liftSecs) || 0);
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    if (ended) return;
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [ended]);
+  const elapsedSecs = Math.floor((now - startRef.current) / 1000);
+  const endSession = () => { setDay({ liftSecs: baseSecsRef.current + elapsedSecs }); setEnded(true); };
 
   const goTo = (i) => { setIdx(i); setWDraft(""); setRDraft(""); setSwapOpen(false); };
   const setSwap = (i, val) => {
@@ -90,11 +105,26 @@ export default function GymMode({ id, data, day, setDay, update, dateKey, onClos
   });
   const removedSlots = hidden.map((i) => ({ i, name: (base[i] || "").split("—")[0].trim() })).filter((x) => x.name);
 
-  const logSet = (warm = false) => {
+  // Add an exercise to this routine mid-session (bodyweight or loaded), and jump to it.
+  const addExercise = () => {
+    const t = addDraft.trim();
+    if (!t || !update) return;
+    update((d) => {
+      const c = { ...(d.custom || {}) };
+      c[id] = { home: [], gym: [], ...(c[id] || {}) };
+      c[id][mode] = [...(c[id][mode] || []), t];
+      return { ...d, custom: c };
+    });
+    setIdx(visible.length);       // the appended custom exercise becomes last-visible
+    setAddDraft(""); setAddOpen(false); setWDraft(""); setRDraft("");
+  };
+
+  const logSet = (warm = false, bodyweight = false) => {
     const rv = num(rDraft);
     if (rv === null) return;
     unlockAudio();
-    const { sets, pr: hit } = buildSetPatch(data, day, dateKey, id, exName, wNum, rv, warm);
+    const w = bodyweight ? 0 : wNum;
+    const { sets, pr: hit } = buildSetPatch(data, day, dateKey, id, exName, w, rv, warm);
     const patch = { sets };
     if (!warm) {
       const checks = { ...(day.checks || {}) };
@@ -118,7 +148,7 @@ export default function GymMode({ id, data, day, setDay, update, dateKey, onClos
     <div className="timer-overlay" style={{ background: "var(--bg)", zIndex: 70 }}>
       {pr && (
         <div className="pr-toast" onClick={() => setPr(null)}>
-          <div style={{ fontSize: 26 }}>🏆</div>
+          <Icon name="trophy" size={26} color="var(--good)" strokeWidth={2} style={{ margin: "0 auto" }} />
           <div className="display" style={{ fontSize: 20, fontWeight: 700, color: "var(--good)" }}>PR — {pr.name}</div>
           <div style={{ fontSize: 13, color: "var(--dim)" }}>{pr.w} × {pr.r} → e1RM {round1(pr.new)} (was {round1(pr.old)})</div>
         </div>
@@ -127,9 +157,13 @@ export default function GymMode({ id, data, day, setDay, update, dateKey, onClos
       <div className="row" style={{ justifyContent: "space-between" }}>
         <div>
           <div className="display" style={{ fontSize: 20, fontWeight: 700 }}>{STRENGTH[id].name}</div>
-          <div style={{ fontSize: 13, color: "var(--dim)" }}>{mode === "home" ? "Home" : "Gym"} · {totalSets} sets · {Math.round(volume).toLocaleString()} lbs moved</div>
+          <div className="row" style={{ gap: 5, fontSize: 13, color: "var(--dim)" }}>
+            <Icon name="clock" size={14} color="var(--dim)" />
+            <span className="display" style={{ fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{fmtClock(elapsedSecs)}</span>
+            <span>· {totalSets} sets · {Math.round(volume).toLocaleString()} lbs</span>
+          </div>
         </div>
-        <button className="btn ghost" onClick={() => setEnded(true)}>End</button>
+        <button className="btn ghost" onClick={endSession}>End</button>
       </div>
 
       {!ended ? (
@@ -157,8 +191,8 @@ export default function GymMode({ id, data, day, setDay, update, dateKey, onClos
               <div className="row" style={{ justifyContent: "center", gap: 10, marginTop: 6 }}>
                 <button className="btn ghost" style={{ fontSize: 13, color: swapOpen ? "var(--fuel)" : "var(--dim)" }}
                   onClick={() => setSwapOpen((o) => !o)}>⇄ Swap</button>
-                <button className="btn ghost" style={{ fontSize: 13, color: "var(--dim)" }}
-                  onClick={() => removeExercise(origIdx)}>🗑 Remove</button>
+                <button className="btn ghost row" style={{ fontSize: 13, color: "var(--dim)", gap: 5 }}
+                  onClick={() => removeExercise(origIdx)}><Icon name="trash" size={15} color="var(--dim)" /> Remove</button>
               </div>
             )}
           </div>
@@ -265,10 +299,16 @@ export default function GymMode({ id, data, day, setDay, update, dateKey, onClos
             disabled={num(rDraft) === null} onClick={() => logSet(false)}>
             ✓ Log set{num(rDraft) !== null ? ` · ${wNum ? wNum + " × " : ""}${rDraft}` : ""}
           </button>
-          <button className="btn" style={{ fontSize: 14, fontWeight: 700, color: num(rDraft) === null ? "var(--dim)" : "var(--ember)", borderColor: "color-mix(in srgb, var(--ember) 35%, var(--line))" }}
-            disabled={num(rDraft) === null} onClick={() => logSet(true)}>
-            + Warm-up set{num(rDraft) !== null ? ` · ${wNum ? wNum + " × " : ""}${rDraft}` : ""}
-          </button>
+          <div className="row" style={{ gap: 8 }}>
+            <button className="btn grow" style={{ fontSize: 14, fontWeight: 700, color: num(rDraft) === null ? "var(--dim)" : "var(--ember)", borderColor: "color-mix(in srgb, var(--ember) 35%, var(--line))" }}
+              disabled={num(rDraft) === null} onClick={() => logSet(true)}>
+              + Warm-up{num(rDraft) !== null ? ` · ${wNum ? wNum + "×" : ""}${rDraft}` : ""}
+            </button>
+            <button className="btn grow" style={{ fontSize: 14, fontWeight: 700, color: num(rDraft) === null ? "var(--dim)" : "var(--good)", borderColor: "color-mix(in srgb, var(--good) 35%, var(--line))" }}
+              disabled={num(rDraft) === null} onClick={() => logSet(false, true)}>
+              + Bodyweight{num(rDraft) !== null ? ` · ${rDraft} reps` : ""}
+            </button>
+          </div>
 
           {restActive ? (
             <div className="row" style={{ justifyContent: "center", gap: 12 }}>
@@ -285,15 +325,35 @@ export default function GymMode({ id, data, day, setDay, update, dateKey, onClos
             <button className="btn grow" disabled={pos === 0} onClick={() => goTo(pos - 1)}>← Prev</button>
             <button className="btn grow" disabled={pos >= visible.length - 1} onClick={() => goTo(pos + 1)}>Next →</button>
           </div>
+
+          {addOpen ? (
+            <div className="row" style={{ gap: 8 }}>
+              <input className="body-font" autoFocus value={addDraft} onChange={(e) => setAddDraft(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && addExercise()}
+                placeholder="Add exercise — e.g. Lunges — 3 × 10" style={{ fontSize: 15, padding: "10px 12px" }} />
+              <button className="btn primary" style={{ fontWeight: 800 }} disabled={!addDraft.trim()} onClick={addExercise}>Add</button>
+              <button className="btn ghost" onClick={() => { setAddOpen(false); setAddDraft(""); }}>Cancel</button>
+            </div>
+          ) : (
+            <button className="btn ghost row" style={{ justifyContent: "center", gap: 6, color: "var(--fuel)", fontSize: 14 }} onClick={() => setAddOpen(true)}>
+              <Icon name="plus" size={16} color="var(--fuel)" strokeWidth={2.2} /> Add exercise to this workout
+            </button>
+          )}
         </div>
       ) : (
         <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", textAlign: "center", gap: 14 }}>
-          <div style={{ fontSize: 52 }}>💪</div>
+          <Icon name="dumbbell" size={48} color="var(--ember)" strokeWidth={2} style={{ margin: "0 auto" }} />
           <div className="display" style={{ fontSize: 28, fontWeight: 700 }}>Session done</div>
-          <div style={{ fontSize: 15, color: "var(--dim)" }}>
-            {totalSets} sets · {Math.round(volume).toLocaleString()} lbs moved
-            {prs.length > 0 && <><br />🏆 {prs.length} PR{prs.length === 1 ? "" : "s"}: {prs.map((p) => p.name).join(", ")}</>}
+          <div className="row" style={{ justifyContent: "center", gap: 6, fontSize: 15, color: "var(--dim)" }}>
+            <Icon name="clock" size={16} color="var(--dim)" />
+            <span className="display" style={{ fontWeight: 700 }}>{fmtClock(baseSecsRef.current + elapsedSecs)}</span>
+            <span>· {totalSets} sets · {Math.round(volume).toLocaleString()} lbs</span>
           </div>
+          {prs.length > 0 && (
+            <div className="row" style={{ justifyContent: "center", gap: 6, fontSize: 14, color: "var(--good)", fontWeight: 700 }}>
+              <Icon name="trophy" size={16} color="var(--good)" strokeWidth={2} /> {prs.length} PR{prs.length === 1 ? "" : "s"}: {prs.map((p) => p.name).join(", ")}
+            </div>
+          )}
           <button className="btn primary display" style={{ fontSize: 20, padding: "14px 0", borderRadius: 16 }} onClick={close}>Done</button>
           <button className="btn ghost" onClick={() => setEnded(false)}>← Back to session</button>
         </div>

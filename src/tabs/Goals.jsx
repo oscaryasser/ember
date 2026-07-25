@@ -6,6 +6,7 @@ import { normalizeImport, summarizeImport, mergeImport, downloadExport, buildExp
 import { buildCoachBrief } from "../lib/brief.js";
 import { kvSet } from "../lib/idb.js";
 import { niceDate } from "../lib/dates.js";
+import Icon from "../components/Icon.jsx";
 
 const GOAL_FIELDS = [
   { id: "protein", label: "Protein goal", unit: "g/day", hint: "The verdict and today's protein bar judge against this." },
@@ -106,7 +107,9 @@ export default function Goals({ data, update, saveState, lastSaved }) {
           Photos stay in the phone's app storage and aren't part of the JSON file.
         </div>
         <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
-          <button className="btn primary grow" onClick={() => downloadExport(data)}>⬇ Export backup (JSON)</button>
+          <button className="btn primary grow row" style={{ justifyContent: "center", gap: 6 }} onClick={() => downloadExport(data)}>
+            <Icon name="download" size={17} strokeWidth={2} /> Export backup (JSON)
+          </button>
           <button className="btn grow" onClick={async () => {
             try {
               await navigator.clipboard.writeText(buildExport(data));
@@ -118,7 +121,9 @@ export default function Goals({ data, update, saveState, lastSaved }) {
           </button>
         </div>
         <div className="row" style={{ gap: 8, flexWrap: "wrap", marginTop: 8 }}>
-          <button className="btn grow" onClick={() => fileRef.current?.click()}>⬆ Import backup file</button>
+          <button className="btn grow row" style={{ justifyContent: "center", gap: 6 }} onClick={() => fileRef.current?.click()}>
+            <Icon name="upload" size={17} color="var(--dim)" strokeWidth={2} /> Import backup file
+          </button>
           <button className="btn grow" onClick={() => setPasteOpen((o) => !o)}>Paste backup JSON</button>
         </div>
         <input ref={fileRef} type="file" accept=".json,application/json,text/plain" style={{ display: "none" }} onChange={onFile} />
@@ -176,7 +181,8 @@ export default function Goals({ data, update, saveState, lastSaved }) {
             setTimeout(() => setBriefCopied(false), 2000);
           } catch { alert("Clipboard blocked — try again after tapping the page."); }
         }}>
-          {briefCopied ? "✓ Copied — paste it to your AI of choice" : "📋 Copy AI coach brief"}
+          {briefCopied ? "✓ Copied — paste it to your AI of choice"
+            : <span className="row" style={{ justifyContent: "center", gap: 6 }}><Icon name="clipboard" size={17} strokeWidth={2} /> Copy AI coach brief</span>}
         </button>
       </Card>
 
@@ -189,10 +195,11 @@ export default function Goals({ data, update, saveState, lastSaved }) {
           Data is written to two places on-device (localStorage + IndexedDB) on every change. Works fully offline once installed.
         </div>
         <button
-          className="btn"
-          style={{ marginTop: 10 }}
+          className="btn row"
+          style={{ marginTop: 10, justifyContent: "center", gap: 6 }}
           onClick={() => update((d) => ({ ...d, theme: d.theme === "dark" ? "light" : "dark" }))}>
-          {data.theme === "dark" ? "☀️ Switch to light theme" : "🌙 Switch to dark theme"}
+          <Icon name={data.theme === "dark" ? "sun" : "moon"} size={17} color="var(--dim)" strokeWidth={2} />
+          {data.theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
         </button>
       </Card>
     </div>

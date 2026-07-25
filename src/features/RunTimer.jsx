@@ -4,6 +4,7 @@ import { fmtClock } from "../lib/dates.js";
 import { unlockAudio, cues } from "../lib/audio.js";
 import { keepAwake, releaseAwake } from "../lib/wakeLock.js";
 import { Seg } from "../components/ui.jsx";
+import Icon from "../components/Icon.jsx";
 
 // Stepper for the custom-session builder.
 const Step = ({ label, value, onChange, min, max, inc = 1, unit }) => (
@@ -256,7 +257,7 @@ export default function RunTimer({ week, customCfg, onCustomChange, onComplete, 
 
       {finished && (
         <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", textAlign: "center", gap: 14 }}>
-          <div style={{ fontSize: 56 }}>🔥</div>
+          <Icon name="flame" size={52} color="var(--ember)" strokeWidth={2} style={{ margin: "0 auto" }} />
           <div className="display" style={{ fontSize: 30, fontWeight: 700 }}>Run complete</div>
           <div style={{ color: "var(--dim)", fontSize: 15 }}>
             {title} logged and marked done. Grab the distance off your Garmin and drop it in the run card.

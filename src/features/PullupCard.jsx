@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Card, SectionLabel, Seg } from "../components/ui.jsx";
+import Icon from "../components/Icon.jsx";
 import { num, sanitizeInt } from "../lib/util.js";
 import { unlockAudio, cues } from "../lib/audio.js";
 import {
@@ -71,7 +72,7 @@ export default function PullupCard({ data, day, setDay, dateKey, goals }) {
     <Card style={{ marginTop: 16, borderColor: sets.length ? "color-mix(in srgb, var(--good) 40%, var(--line))" : undefined }}>
       {pr && (
         <div className="pr-toast" onClick={() => setPr(null)}>
-          <div style={{ fontSize: 26 }}>🏆</div>
+          <Icon name="trophy" size={26} color="var(--good)" strokeWidth={2} style={{ margin: "0 auto" }} />
           <div className="display" style={{ fontSize: 20, fontWeight: 700, color: "var(--good)" }}>
             PR — {GRIPS[pr.grip].label}
           </div>

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Card, SectionLabel } from "../components/ui.jsx";
+import Icon from "../components/Icon.jsx";
 import { savePhoto, listPhotos, deletePhoto } from "../lib/photos.js";
 import { todayKey, shortDate } from "../lib/dates.js";
 
@@ -100,8 +101,8 @@ export default function Photos() {
       {!!(a || b) && !(a && b) && (
         <div className="row" style={{ marginBottom: 10, gap: 8 }}>
           <div className="grow" style={{ fontSize: 12, color: "var(--dim)" }}>Tap a second photo to compare side by side.</div>
-          <button className="btn" style={{ fontSize: 12, padding: "6px 10px" }} onClick={() => savePhotoOut(a || b)}>
-            ⬇ Save
+          <button className="btn row" style={{ fontSize: 12, padding: "6px 10px", gap: 4 }} onClick={() => savePhotoOut(a || b)}>
+            <Icon name="download" size={14} color="var(--dim)" /> Save
           </button>
           <button className="btn" style={{ fontSize: 12, color: "var(--bad)", padding: "6px 10px" }}
             onClick={() => remove((a || b).id)}>
@@ -111,8 +112,8 @@ export default function Photos() {
       )}
 
       <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={onPick} />
-      <button className="btn primary" style={{ width: "100%", marginBottom: 10 }} disabled={busy} onClick={() => fileRef.current?.click()}>
-        {busy ? "Saving…" : "📷 Add photo (camera or library)"}
+      <button className="btn primary row" style={{ width: "100%", marginBottom: 10, justifyContent: "center", gap: 6 }} disabled={busy} onClick={() => fileRef.current?.click()}>
+        {busy ? "Saving…" : <><Icon name="camera" size={18} strokeWidth={2} /> Add photo (camera or library)</>}
       </button>
 
       {photos === null ? (

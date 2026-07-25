@@ -39,8 +39,8 @@ export default function HeroRing({ data, day }) {
   const centerShown = useCountUp(left !== null ? Math.abs(Math.round(left)) : intake || 0);
 
   return (
-    <div className="row" style={{ gap: 6, alignItems: "center" }}>
-      <svg viewBox="0 0 120 120" style={{ width: 108, height: 108, flexShrink: 0 }} role="img"
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+      <svg viewBox="0 0 120 120" style={{ width: 104, height: 104, flexShrink: 0 }} role="img"
         aria-label={left !== null ? `${Math.abs(left)} calories ${left >= 0 ? "left" : "over"}` : "calories logged"}>
         <circle cx={CX} cy={CY} r={R1} fill="none" stroke="var(--card2)" strokeWidth={SW} />
         <circle cx={CX} cy={CY} r={R2} fill="none" stroke="var(--card2)" strokeWidth={SW - 2} />
@@ -61,13 +61,15 @@ export default function HeroRing({ data, day }) {
           style={{ fontVariantNumeric: "tabular-nums" }}>
           {left !== null || intake ? (centerShown ?? 0).toLocaleString() : "—"}
         </text>
-        <text x={CX} y={CY + 12} textAnchor="middle" fontSize="8.5" fill="var(--dim)" style={{ textTransform: "uppercase", letterSpacing: "0.08em" }}>
+        <text x={CX} y={CY + 13} textAnchor="middle" fontSize="9" fill="var(--dim)" style={{ textTransform: "uppercase", letterSpacing: "0.08em" }}>
           {left !== null ? (over ? "kcal over" : "kcal left") : "kcal logged"}
         </text>
-        <text x={CX} y={CY + 24} textAnchor="middle" fontSize="8" fill="var(--c-good)" fontWeight="700">
-          {protGoal ? `P ${Math.round(prot)}/${Math.round(protGoal)}` : ""}
-        </text>
       </svg>
+      {protGoal ? (
+        <div style={{ fontSize: 12, fontWeight: 800, color: prot >= protGoal ? "var(--good)" : "var(--dim)" }}>
+          P {Math.round(prot)}/{Math.round(protGoal)}g
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { Card, SectionLabel } from "../components/ui.jsx";
 import { RUN_WEEKS, STRENGTH, STRENGTH_DAYS, STRENGTH_META } from "../plan.js";
 import WeekPlanner from "../features/WeekPlanner.jsx";
+import Icon from "../components/Icon.jsx";
 
 export default function Plan({ data, update }) {
   const goals = data.goals;
@@ -43,8 +44,9 @@ export default function Plan({ data, update }) {
             <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
               {["home", "gym"].map((m) => (
                 <div key={m} style={{ flex: "1 1 45%", minWidth: 200 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                    {m === "home" ? "🏠 Home (bands + vest)" : "🏋️ Gym"}
+                  <div className="row" style={{ fontSize: 13, fontWeight: 700, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em", gap: 5 }}>
+                    <Icon name={m === "home" ? "home" : "dumbbell"} size={15} color="var(--dim)" strokeWidth={2} />
+                    {m === "home" ? "Home (bands + vest)" : "Gym"}
                   </div>
                   {[...STRENGTH[id][m], ...(((data.custom || {})[id] || {})[m] || [])].map((ex, i) => {
                     const isBase = i < STRENGTH[id][m].length;
