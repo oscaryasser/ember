@@ -3,6 +3,7 @@ import { STRENGTH, sessionList, substitutesFor, movementLabel } from "../plan.js
 import { num, round1, e1rm, sanitizeDecimal, sanitizeInt } from "../lib/util.js";
 import { lastSetsFor, buildSetPatch, bestBefore } from "../lib/strength.js";
 import { plateBreakdown, warmupRamp, BAR } from "../lib/plates.js";
+import { progressionAdvice } from "../lib/progression.js";
 import { fmtClock } from "../lib/dates.js";
 import { unlockAudio, cues } from "../lib/audio.js";
 import { keepAwake, releaseAwake } from "../lib/wakeLock.js";
@@ -79,6 +80,8 @@ export default function GymMode({ id, data, day, setDay, update, dateKey, onClos
   const onBase = !cur.isCustom;
   const ramp = workSets.length === 0 && (wNum || 0) > BAR + 10 ? warmupRamp(wNum) : null;
   const subs = swapOpen && onBase ? substitutesFor(exName, mode) : null;
+  const advice = progressionAdvice(data, exName, dateKey, scheme);
+  const ADV_TONE = { good: "var(--good)", fuel: "var(--fuel)", warn: "var(--ember)", dim: "var(--dim)" };
 
   const workingOf = (arr) => arr.filter((s) => !s.warm);
   const totalSets = Object.values((day.sets || {})[id] || {}).reduce((a, s) => a + workingOf(s).length, 0);
@@ -186,7 +189,9 @@ export default function GymMode({ id, data, day, setDay, update, dateKey, onClos
           )}
           <div style={{ textAlign: "center" }}>
             <div className="display" style={{ fontSize: 27, fontWeight: 700, lineHeight: 1.2 }}>{exName}</div>
-            <div style={{ fontSize: 14, color: "var(--dim)" }}>{scheme}{custom.includes(ex) ? " · yours" : ""}</div>
+            <div style={{ fontSize: 14, color: "var(--dim)" }}>
+              target {advice.range[0]}–{advice.range[1]} reps · ~2 in reserve{custom.includes(ex) ? " · yours" : ""}
+            </div>
             {onBase && (
               <div className="row" style={{ justifyContent: "center", gap: 10, marginTop: 6 }}>
                 <button className="btn ghost" style={{ fontSize: 13, color: swapOpen ? "var(--fuel)" : "var(--dim)" }}
@@ -237,8 +242,11 @@ export default function GymMode({ id, data, day, setDay, update, dateKey, onClos
                   </div>
                 );
               })}
-              <div style={{ fontSize: 12, color: lastMaxReps >= 12 ? "var(--good)" : "var(--dim)", marginTop: 4 }}>
-                {lastMaxReps >= 12 ? "Hit 12 last time → add load today." : "Beat it: one more rep or +5 lb on any set."}
+              <div className="row" style={{ gap: 6, marginTop: 6, padding: "6px 8px", borderRadius: 8, alignItems: "flex-start",
+                background: `color-mix(in srgb, ${ADV_TONE[advice.tone]} 9%, transparent)` }}>
+                <Icon name={advice.status === "add-weight" || advice.status === "add-load" ? "chart" : advice.status === "deload" ? "warning" : "target"}
+                  size={14} color={ADV_TONE[advice.tone]} strokeWidth={2} style={{ marginTop: 1 }} />
+                <span style={{ fontSize: 12, fontWeight: 600, color: ADV_TONE[advice.tone] }}>{advice.msg}</span>
               </div>
             </div>
           ) : (

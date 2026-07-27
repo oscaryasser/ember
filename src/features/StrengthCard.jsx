@@ -4,6 +4,7 @@ import { Card, Check, Seg, SectionLabel } from "../components/ui.jsx";
 import { num, round1, sanitizeDecimal, sanitizeInt } from "../lib/util.js";
 import { lastSetsFor, buildSetPatch } from "../lib/strength.js";
 import { warmupRamp, BAR } from "../lib/plates.js";
+import { progressionAdvice } from "../lib/progression.js";
 import Icon from "../components/Icon.jsx";
 import { fmtClock } from "../lib/dates.js";
 import { unlockAudio, cues } from "../lib/audio.js";
@@ -127,6 +128,8 @@ export default function StrengthCard({ id, data, day, setDay, update, dateKey })
         const wDraft = drafts["w-" + rowKey] || "";
         const rDraft = drafts["r-" + rowKey] || "";
         const subs = !isCustom && swapFor === i ? substitutesFor(exName, mode) : null;
+        const adv = progressionAdvice(data, exName, dateKey, ex.split("—")[1]?.trim());
+        const ADV_C = { good: "var(--good)", fuel: "var(--fuel)", warn: "var(--ember)", dim: "var(--dim)" };
 
         const addSet = () => {
           const wv = num(wDraft), rv = num(rDraft);
@@ -214,9 +217,9 @@ export default function StrengthCard({ id, data, day, setDay, update, dateKey })
                 {last && (
                   <div style={{ fontSize: 13, color: "var(--dim)", marginBottom: 6 }}>
                     Last ({last.k.slice(5)}): {last.sets.map((s) => `${s.w ? s.w + "×" : ""}${s.r}`).join(", ")}
-                    {lastMaxReps >= 12 && <span style={{ color: "var(--good)", fontWeight: 700 }}> → hit 12, go up</span>}
                   </div>
                 )}
+                <div style={{ fontSize: 12, fontWeight: 600, color: ADV_C[adv.tone], marginBottom: 8 }}>{adv.msg}</div>
                 {warm && (
                   <div style={{ fontSize: 12, color: "var(--fuel)", marginBottom: 8 }}>
                     Warm-up: {warm.map((s) => `${s.w}×${s.r}`).join(" → ")} → work sets

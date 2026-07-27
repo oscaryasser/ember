@@ -65,6 +65,31 @@ export default function Plan({ data, update }) {
       })}
 
       <Card style={{ marginTop: 12 }}>
+        <SectionLabel color="var(--fuel)">Lifting · how to progress (and not get hurt)</SectionLabel>
+        <div style={{ fontSize: 14, lineHeight: 1.55, marginBottom: 10 }}>
+          You're in a <b>~{goals.deficit} kcal/day deficit</b>, so the job of lifting is to <b>keep the muscle you have</b>,
+          not chase records. Progress will be slower and stall sooner than on a bulk — <b>maintaining your lifts while the
+          waist drops is the win</b> (that's what the Coach's Recomp Check tracks). Adding weight every single session is
+          how you grind ugly reps and get hurt.
+        </div>
+        {[
+          ["Double progression", "Each lift has a rep range (e.g. 8–12). Add REPS at the same weight each session. Only when you hit the top of the range on every set — clean, with a rep in reserve — add the smallest jump (5 lb upper / 10 lb lower) and drop back to the bottom."],
+          ["Leave 1–3 in reserve", "Stop each work set when you could still do ~2 clean reps. Don't train to failure on a cut — it piles on fatigue and injury risk for little gain. Push the last set close occasionally, not every set."],
+          ["When it stalls", "Expect ~4–8 weeks of progress on compounds, then it flattens. A lift is stalled if it won't move for 3 sessions: check sleep + protein, then deload it 10% and rebuild — or just hold and maintain. Gym Mode flags this for you per exercise."],
+          ["Deload", "Every ~6–8 weeks (or when joints ache, sleep tanks, motivation drops): a lighter week — less weight, fewer sets, more reps in reserve. Fatigue builds faster in a deficit, so this matters more for you."],
+          ["Stay safe", "Full range, ~2 s on the lowering, warm-up ramp first (the app does this). Muscle soreness that moves around is fine; sharp, localized joint/tendon pain that lingers means back off, swap the exercise, and see a physio if it persists."],
+        ].map(([name, txt], i) => (
+          <div key={name} style={{ padding: "8px 0", borderTop: i ? "1px solid var(--line)" : "none" }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: "var(--fuel)" }}>{name}</div>
+            <div style={{ fontSize: 13, color: "var(--dim)", marginTop: 2 }}>{txt}</div>
+          </div>
+        ))}
+        <div style={{ fontSize: 12, color: "var(--dim)", marginTop: 8 }}>
+          Gym Mode gives you the exact next move on each lift — add a rep, add load, or deload — from your own history.
+        </div>
+      </Card>
+
+      <Card style={{ marginTop: 12 }}>
         <SectionLabel color="var(--good)">Pull-up program · grease the groove</SectionLabel>
         <div style={{ fontSize: 15, lineHeight: 1.55, marginBottom: 10 }}>
           Runs <b>beside</b> your lifting sessions, not inside them — <b>{goals.pullupDays} days a week</b>, easy sets spread

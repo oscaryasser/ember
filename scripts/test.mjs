@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { buildRunSegments, buildCustomSegments, totalSecs, RUN_WEEKS } from "../src/plan.js";
 import { buildStrength, substitutesFor, sessionList, movementOf, PROGRAM } from "../src/lib/exercises.js";
 import { buildSetPatch, exerciseHistory, lastSetsFor } from "../src/lib/strength.js";
+import { repRange, loadIncrement, progressionAdvice } from "../src/lib/progression.js";
 import { plateBreakdown, warmupRamp } from "../src/lib/plates.js";
 import { recompCheck } from "../src/lib/recomp.js";
 import { adaptationCheck, gapSuggestions } from "../src/lib/adaptive.js";
@@ -316,6 +317,49 @@ test("a working set still PRs over history despite warm-ups present", () => {
   const day = { sets: { P: { Bench: [{ w: 95, r: 5, warm: true }] } } };
   const { pr } = buildSetPatch(data, day, "2026-08-01", "P", "Bench", 165, 8, false);
   assert.ok(pr && pr.new > pr.old);
+});
+
+console.log("lifting progression coach");
+test("repRange parses schemes; loadIncrement by movement", () => {
+  assert.deepEqual(repRange("3 × 8–12"), [8, 12]);
+  assert.deepEqual(repRange("4 × 12–20"), [12, 20]);
+  assert.deepEqual(repRange("3 × 15"), [12, 15]);
+  assert.deepEqual(repRange(""), [8, 12]);
+  assert.equal(loadIncrement("Leg press"), 10);   // lower compound
+  assert.equal(loadIncrement("Chest press machine"), 5); // upper
+});
+test("advice: no history → start light", () => {
+  const a = progressionAdvice({ days: {} }, "Chest press machine", "2026-08-10", "3 × 8–12");
+  assert.equal(a.status, "start");
+  assert.deepEqual(a.range, [8, 12]);
+});
+test("advice: mid-range → add reps", () => {
+  const days = { "2026-08-01": { sets: { P: { Bench: [{ w: 135, r: 8 }, { w: 135, r: 8 }] } } } };
+  const a = progressionAdvice({ days }, "Bench", "2026-08-10", "3 × 8–12");
+  assert.equal(a.status, "add-reps");
+  assert.match(a.msg, /Add a rep/);
+});
+test("advice: all sets at top of range → add weight", () => {
+  const days = { "2026-08-01": { sets: { P: { Bench: [{ w: 135, r: 12 }, { w: 135, r: 12 }] } } } };
+  const a = progressionAdvice({ days }, "Bench", "2026-08-10", "3 × 8–12");
+  assert.equal(a.status, "add-weight");
+  assert.match(a.msg, /add 5 lb/);
+});
+test("advice: flat e1RM 3 sessions → deload", () => {
+  const days = {
+    "2026-08-01": { sets: { P: { Bench: [{ w: 135, r: 9 }] } } },
+    "2026-08-04": { sets: { P: { Bench: [{ w: 135, r: 9 }] } } },
+    "2026-08-07": { sets: { P: { Bench: [{ w: 135, r: 9 }] } } },
+  };
+  const a = progressionAdvice({ days }, "Bench", "2026-08-10", "3 × 8–12");
+  assert.equal(a.status, "deload");
+  assert.match(a.msg, /Deload to 120 lb/); // 135 × 0.9 = 121.5 → nearest 5 = 120
+});
+test("advice: bodyweight lift progresses on reps, warm-ups ignored", () => {
+  const days = { "2026-08-01": { sets: { L: { Lunges: [{ w: 0, r: 20, warm: true }, { w: 0, r: 9 }] } } } };
+  const a = progressionAdvice({ days }, "Lunges", "2026-08-10", "3 × 8–10 / leg");
+  assert.equal(a.status, "add-reps");
+  assert.match(a.msg, /aim for 10/); // warm 20 excluded; working set 9 toward 10
 });
 
 console.log("scheduled suggestion");
