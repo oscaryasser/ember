@@ -45,3 +45,29 @@ npm run icons     # regenerate PNG icons from public/favicon.svg
 ```
 
 Deploys automatically to GitHub Pages via Actions on every push to `main`.
+
+## iOS (Capacitor)
+
+The same codebase ships as a native iOS app via a Capacitor wrap — no rewrite. The web
+build is unchanged: `npm run build` still emits the `/ember/` base for Pages; the native
+build uses a relative base so assets load over `capacitor://localhost`.
+
+```bash
+npm run build:native      # Vite build with CAP_BUILD=1 → relative './' base
+npx cap sync ios          # copy web assets into ios/ + refresh SwiftPM plugins
+npm run native:assets     # regenerate iOS icons + splash from the flame SVG
+```
+
+Open `ios/App/App.xcodeproj` in Xcode to run on a simulator/device. When building from
+the CLI, point `-derivedDataPath` **outside** the iCloud-synced Desktop tree (e.g.
+`/private/tmp/...`) — otherwise the file provider stamps `com.apple.FinderInfo` xattrs on
+build outputs and codesign fails with *"resource fork … detritus not allowed."*
+
+**Apple Health** (native only): a small read-only Swift plugin (`ios/App/App/HealthPlugin.swift`)
+imports body mass, steps, sleep, active energy, and workouts into the existing
+`ember:data:v1` log. Manual entries always win. Connect/disconnect lives in the Goals tab;
+on the web the control renders nothing.
+
+**App Store:** metadata + config live in `fastlane/`. Archive/export/upload with the
+Xcode-native path (no Ruby needed) — set `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_PATH`
+then run `scripts/appstore-submit.sh`. Metadata + submit-for-review via `fastlane ios release`.
