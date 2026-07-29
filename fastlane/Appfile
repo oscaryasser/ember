@@ -1,0 +1,5 @@
+app_identifier("com.oscaryasser.ember")
+# Apple team that owns the signing certs (discovered from Xcode automatic signing).
+team_id("898HQB7YB5")
+# App Store Connect team — usually the same; override via env if it differs.
+itc_team_id(ENV["ASC_TEAM_ID"]) if ENV["ASC_TEAM_ID"]

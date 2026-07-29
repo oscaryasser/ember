@@ -1,0 +1,89 @@
+# Ember — App Store pipeline, driven entirely by an App Store Connect API key.
+#
+# Provide the key via env before running (never commit the .p8):
+#   export ASC_KEY_ID=XXXXXXXXXX
+#   export ASC_ISSUER_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+#   export ASC_KEY_PATH=/absolute/path/to/AuthKey_XXXXXXXXXX.p8
+#
+# Lanes:
+#   fastlane ios register   # create the bundle id + App Store Connect app record
+#   fastlane ios beta        # build a signed archive + upload to TestFlight
+#   fastlane ios release     # build + upload + push metadata + submit for review
+#
+# The web build is untouched by any of this — everything here operates on ios/.
+
+default_platform(:ios)
+
+APP_ID = "com.oscaryasser.ember"
+XCODEPROJ = "ios/App/App.xcodeproj"
+WORKSPACE_SCHEME = "App"
+
+def asc_key
+  app_store_connect_api_key(
+    key_id: ENV.fetch("ASC_KEY_ID"),
+    issuer_id: ENV.fetch("ASC_ISSUER_ID"),
+    key_filepath: ENV.fetch("ASC_KEY_PATH"),
+    in_house: false
+  )
+end
+
+platform :ios do
+  desc "Build the web bundle for native and sync Capacitor"
+  lane :prepare do
+    sh("cd .. && npm run build:native && npx cap sync ios")
+  end
+
+  desc "Register bundle id + create the App Store Connect app record"
+  lane :register do
+    key = asc_key
+    produce(
+      api_key: key,
+      app_identifier: APP_ID,
+      app_name: "Ember",
+      language: "en-US",
+      app_version: "1.0",
+      sku: "ember-ios-001",
+      enable_services: { healthkit: "on" }
+    )
+  end
+
+  desc "Signed archive + TestFlight upload"
+  lane :beta do
+    key = asc_key
+    prepare
+    increment_build_number(xcodeproj: XCODEPROJ, build_number: latest_testflight_build_number(api_key: key, app_identifier: APP_ID).to_i + 1)
+    build_app(
+      project: XCODEPROJ,
+      scheme: WORKSPACE_SCHEME,
+      export_method: "app-store",
+      output_directory: "build/ios",
+      output_name: "Ember.ipa"
+    )
+    upload_to_testflight(api_key: key, app_identifier: APP_ID, skip_waiting_for_build_processing: true)
+  end
+
+  desc "Archive + upload + metadata + submit for review"
+  lane :release do
+    key = asc_key
+    prepare
+    build_app(
+      project: XCODEPROJ,
+      scheme: WORKSPACE_SCHEME,
+      export_method: "app-store",
+      output_directory: "build/ios",
+      output_name: "Ember.ipa"
+    )
+    upload_to_app_store(
+      api_key: key,
+      app_identifier: APP_ID,
+      submit_for_review: true,
+      automatic_release: true,
+      force: true,                       # skip the HTML preview/confirm
+      precheck_include_in_app_purchases: false,
+      submission_information: {
+        add_id_info_uses_idfa: false,
+        export_compliance_uses_encryption: false
+      }
+    )
+  end
+end

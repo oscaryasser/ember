@@ -1,0 +1,16 @@
+Ember turns your daily runs, lifts, food, and weigh-ins into one clear verdict: are you actually losing fat while keeping muscle?
+
+WHAT EMBER DOES
+• Today — log weight, protein, calories in/out, steps, and sleep in seconds. A live ring shows exactly where you stand.
+• Gym Mode — run your Push / Pull / Legs sessions with a rest timer, warm-up ramps, plate math, and previous-vs-today numbers for real progressive overload.
+• Coach — a plain-English weekly verdict (eat more, push harder, or hold the line) based on your own trend, not generic rules.
+• Progress — weight trend, strength and pull-up charts, body measurements, and progress photos.
+• Plan — a grease-the-groove pull-up program and a simple tap-to-plan weekly schedule.
+
+APPLE HEALTH (OPTIONAL)
+Connect Apple Health and Ember auto-fills your weight, steps, sleep, active energy, and workouts. It only reads — nothing is ever written back — and anything you enter by hand always wins.
+
+YOUR DATA STAYS YOURS
+Everything lives on your device. No accounts, no ads, no tracking. Nothing you log ever leaves your phone. Export a JSON backup whenever you want.
+
+Ember is for people who lift and run and want to stop guessing.
