@@ -9,6 +9,7 @@
     "build:native": "CAP_BUILD=1 vite build",
     "preview": "vite preview --port 4173 --strictPort",
     "icons": "node scripts/make-icons.mjs",
+    "native:assets": "node scripts/make-native-assets.mjs && capacitor-assets generate --ios --iconBackgroundColor #0c0e12 --iconBackgroundColorDark #0c0e12 --splashBackgroundColor #0c0e12 --splashBackgroundColorDark #0c0e12",
     "test": "node scripts/test.mjs",
     "smoke": "node scripts/smoke.mjs"
   },
@@ -19,6 +20,7 @@
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
     "@capacitor/cli": "^8.4.2",
     "@vitejs/plugin-react": "^4.3.4",
     "fake-indexeddb": "^6.2.5",
