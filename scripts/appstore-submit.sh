@@ -38,6 +38,7 @@ echo "==> Archiving (Release, automatic signing, team 898HQB7YB5)"
 xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Release \
   -destination 'generic/platform=iOS' -archivePath "$ARCHIVE" \
   -derivedDataPath "$BUILD_DIR/DerivedData" \
+  DEVELOPMENT_TEAM=898HQB7YB5 \
   -allowProvisioningUpdates \
   -authenticationKeyID "$ASC_KEY_ID" \
   -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
