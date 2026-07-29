@@ -1,0 +1,8 @@
+{
+  "appId": "com.oscaryasser.ember",
+  "appName": "Ember",
+  "webDir": "dist",
+  "ios": {
+    "contentInset": "always"
+  }
+}

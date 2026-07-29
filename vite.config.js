@@ -2,8 +2,14 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 
+// Web/PWA is served from GitHub Pages under /ember/. The native (Capacitor)
+// build loads assets locally (capacitor://localhost / file://), so it needs a
+// RELATIVE base. Gate on CAP_BUILD: the default `npm run build` — used by CI,
+// the smoke gate and the Pages deploy — is untouched and still emits /ember/.
+const isNative = process.env.CAP_BUILD === "1";
+
 export default defineConfig({
-  base: "/ember/",
+  base: isNative ? "./" : "/ember/",
   plugins: [
     react(),
     VitePWA({
