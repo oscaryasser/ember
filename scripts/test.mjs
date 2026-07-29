@@ -9,6 +9,7 @@ import { recompCheck } from "../src/lib/recomp.js";
 import { adaptationCheck, gapSuggestions } from "../src/lib/adaptive.js";
 import { buildCoachBrief } from "../src/lib/brief.js";
 import { normalizeImport, summarizeImport, mergeImport } from "../src/lib/importExport.js";
+import { healthToFields, applyHealthToDay, workoutIdsFor, mergeHealthImport } from "../src/lib/healthMerge.js";
 import { num, netOf, proteinOf, e1rm, sanitizeDay, safeParse, pickFresher, intakeOf, mealTotals, sleepTotalOf } from "../src/lib/util.js";
 import { estimateTDEE, resolveTargets, weightSlope, kcalFromMacros } from "../src/lib/adaptive.js";
 import { weekStatsFor, coachVerdict, logStreak, fullWeekStreak, suggestTraining, heatLevel } from "../src/lib/coach.js";
@@ -714,6 +715,55 @@ test("pullupVolume counts band and negative reps", () => {
 test("legacy days without pullups are untouched", () => {
   assert.equal(pullupVolume(legacyDay), 0);
   assert.equal(GRIP_ORDER.length, 3);
+});
+
+// ---- HealthKit auto-import (read-only) mapping ----
+test("healthToFields maps + rounds, drops empties", () => {
+  assert.deepEqual(
+    healthToFields({ bodyMass: 211.47, steps: 8123.9, sleepHours: 7.26, activeEnergy: 512.6 }),
+    { weight: "211.5", steps: "8124", sleepHours: "7.3", calActive: "513" }
+  );
+  assert.deepEqual(healthToFields({ bodyMass: 0, steps: null }), {});
+  assert.deepEqual(healthToFields(null), {});
+});
+test("applyHealthToDay fills empty fields and records provenance", () => {
+  const out = applyHealthToDay({ weight: "", steps: "" }, { weight: "211.5", steps: "8124" });
+  assert.equal(out.weight, "211.5");
+  assert.equal(out.steps, "8124");
+  assert.equal(out.health.fields.weight, "211.5");
+});
+test("manual entry ALWAYS overrides Health", () => {
+  // User typed 210 by hand; Health reports 211.5 → manual is kept.
+  const day = { weight: "210", health: { fields: {} } };
+  const out = applyHealthToDay(day, { weight: "211.5" });
+  assert.equal(out.weight, "210", "manual weight preserved");
+  assert.notEqual(out.health.fields.weight, "211.5");
+});
+test("Health refreshes a value it wrote last sync (user untouched)", () => {
+  const day = { weight: "211.5", health: { fields: { weight: "211.5" } } };
+  const out = applyHealthToDay(day, { weight: "210.2" });
+  assert.equal(out.weight, "210.2", "re-sync updates its own prior value");
+});
+test("workoutIdsFor maps run + strength split", () => {
+  assert.deepEqual(workoutIdsFor([{ kind: "run" }], "2026-07-29", () => "L"), ["run"]);
+  assert.deepEqual(workoutIdsFor([{ kind: "strength" }], "2026-07-29", () => "L"), ["L"]);
+  assert.deepEqual(workoutIdsFor([{ kind: "strength" }], "2026-07-29"), ["P"]); // default
+});
+test("mergeHealthImport unions activities without dropping manual ones", () => {
+  const data = { days: { "2026-07-29": { activities: ["run"], weight: "" } } };
+  const merged = mergeHealthImport(
+    data,
+    { "2026-07-29": { bodyMass: 200, workouts: [{ kind: "strength" }] } },
+    () => "U"
+  );
+  assert.deepEqual(merged.days["2026-07-29"].activities, ["run", "U"]);
+  assert.equal(merged.days["2026-07-29"].weight, "200");
+  assert.ok(merged.health.lastSync);
+});
+test("Health day survives sanitizeDay round-trip (schema-safe)", () => {
+  const out = applyHealthToDay({ weight: "" }, { weight: "180" });
+  const clean = sanitizeDay(out);
+  assert.equal(clean.health.fields.weight, "180", "health provenance passes through sanitize");
 });
 
 console.log(`\n${passed} tests passed${process.exitCode ? " (with failures)" : ""}`);
