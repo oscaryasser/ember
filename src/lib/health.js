@@ -29,15 +29,12 @@ export async function isNativeIOS() {
   }
 }
 
-// True only on a device where HealthKit exists (false on web and iPad-less sims).
+// Show the Health control on any native iOS build. Actual HealthKit
+// availability + authorization is resolved when the user taps Connect
+// (requestAuthorization resolves granted:false if HealthKit is unavailable),
+// so a flaky isAvailable() round-trip can't hide the control on device.
 export async function healthAvailable() {
-  if (!(await isNativeIOS())) return false;
-  try {
-    const r = await (await plugin()).isAvailable();
-    return !!r.available;
-  } catch {
-    return false;
-  }
+  return isNativeIOS();
 }
 
 // Presents the system Health permission sheet. Resolves to whether the user
