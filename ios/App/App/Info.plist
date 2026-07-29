@@ -47,5 +47,9 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>NSHealthShareUsageDescription</key>
+	<string>Ember reads your weight, steps, sleep, active energy, and workouts from the Health app to auto-fill your daily log. This data stays on your device — nothing is uploaded.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>Ember does not write any data to Health. It only reads your metrics to fill in your log.</string>
 </dict>
 </plist>

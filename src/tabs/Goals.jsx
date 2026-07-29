@@ -7,6 +7,7 @@ import { buildCoachBrief } from "../lib/brief.js";
 import { kvSet } from "../lib/idb.js";
 import { niceDate } from "../lib/dates.js";
 import Icon from "../components/Icon.jsx";
+import HealthConnect from "../features/HealthConnect.jsx";
 
 const GOAL_FIELDS = [
   { id: "protein", label: "Protein goal", unit: "g/day", hint: "The verdict and today's protein bar judge against this." },
@@ -99,6 +100,8 @@ export default function Goals({ data, update, saveState, lastSaved }) {
           Changes apply everywhere immediately — today's bars, the energy ledger, the weekly verdict, the streaks.
         </div>
       </Card>
+
+      <HealthConnect data={data} update={update} />
 
       <Card style={{ marginTop: 12 }}>
         <SectionLabel color="var(--fuel)">Backup & restore</SectionLabel>

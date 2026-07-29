@@ -60,6 +60,10 @@ function migrate(parsed) {
     foods: Array.isArray(d.foods) ? d.foods.filter((f) => f && typeof f === "object" && typeof f.name === "string") : [],
     customRun: d.customRun && typeof d.customRun === "object" ? d.customRun : null,
     goals: { ...DEFAULT_GOALS, ...(d.goals || {}), ...(!d.goals && d.targetWeight ? { targetWeight: d.targetWeight } : {}) },
+    // HealthKit connection state (native only). Additive + optional — old
+    // backups have no `health`, which is fine. Per-day provenance lives on each
+    // day record and rides through sanitizeDay untouched.
+    health: d.health && typeof d.health === "object" && !Array.isArray(d.health) ? d.health : {},
   };
 }
 

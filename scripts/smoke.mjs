@@ -7,14 +7,24 @@
 // Run AFTER `vite build`:  npm run smoke
 import { Window } from "happy-dom";
 import "fake-indexeddb/auto";
-import { readdirSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import assert from "node:assert/strict";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const assets = join(root, "dist/assets");
-const bundle = readdirSync(assets).find((f) => /^index-.*\.js$/.test(f));
+// Boot the ACTUAL entry chunk index.html loads — code-splitting (e.g. the
+// lazy @capacitor/core chunk) can emit more than one index-*.js, so never just
+// grab the first match.
+const bundle = (() => {
+  try {
+    const html = readFileSync(join(root, "dist/index.html"), "utf8");
+    const m = html.match(/src="[^"]*\/assets\/(index-[^"]+\.js)"/);
+    if (m) return m[1];
+  } catch { /* fall through */ }
+  return readdirSync(assets).find((f) => /^index-.*\.js$/.test(f));
+})();
 if (!bundle) {
   console.error("smoke: no dist bundle — run `vite build` first");
   process.exit(1);
