@@ -320,6 +320,39 @@ test("a working set still PRs over history despite warm-ups present", () => {
   assert.ok(pr && pr.new > pr.old);
 });
 
+console.log("45-min (Nippard) mode");
+test("buildStrength includes min45: Push/Pull 5, Legs 4, with RPE in scheme", () => {
+  const S = buildStrength();
+  assert.equal(S.P.min45.length, 5);
+  assert.equal(S.U.min45.length, 5);
+  assert.equal(S.L.min45.length, 4);
+  assert.ok(S.P.min45[0].startsWith("Barbell Bench Press"));
+  assert.match(S.P.min45[0], /RPE 7-8/);
+});
+test("min45 swaps: doc alternative first, then extra same-muscle subs, ≤5", () => {
+  const subs = substitutesFor("Barbell Bench Press", "min45");
+  assert.ok(subs.length >= 2 && subs.length <= 5);
+  assert.ok(subs[0].startsWith("Machine Chest Press"), "doc alt leads");
+  assert.ok(subs.every((s) => s.includes("RPE 7-8")), "keeps the slot's scheme");
+  assert.equal(substitutesFor("Not real", "min45").length, 0);
+});
+test("min45 exercises resolve to a movement (progression + increments work)", () => {
+  assert.equal(movementOf("Cable Lateral Raise"), "lateralRaise");
+  assert.equal(movementOf("Barbell Back Squat"), "squat");
+  assert.equal(loadIncrement("Barbell Back Squat"), 10); // lower compound
+});
+test("repRange reads reps after ×, ignoring a sets range and the RPE tail", () => {
+  assert.deepEqual(repRange("2–3 × 10–12/leg · RPE 8"), [10, 12]);
+  assert.deepEqual(repRange("3 × 6–8 · RPE 7-8"), [6, 8]);
+  assert.deepEqual(repRange("3 × 12–15 · RPE 9-10"), [12, 15]);
+});
+test("progression advice works on a min45 slot scheme", () => {
+  const days = { "2026-08-01": { sets: { P: { "Barbell Bench Press": [{ w: 185, r: 8 }] } } } };
+  const a = progressionAdvice({ days }, "Barbell Bench Press", "2026-08-10", "3 × 6–8 · RPE 7-8");
+  assert.equal(a.status, "add-weight"); // hit top (8) → add load
+  assert.match(a.msg, /add 5 lb/);
+});
+
 console.log("lifting progression coach");
 test("repRange parses schemes; loadIncrement by movement", () => {
   assert.deepEqual(repRange("3 × 8–12"), [8, 12]);

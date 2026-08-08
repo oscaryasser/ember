@@ -38,7 +38,7 @@ export default function Progress({ data, update }) {
 
   return (
     <div className="fade-in">
-      <Card>
+      <Card className="progress-hero">
         <div className="row" style={{ justifyContent: "space-between", marginBottom: 10 }}>
           <SectionLabel>Weight</SectionLabel>
           <div className="row" style={{ gap: 6 }}>

@@ -101,16 +101,50 @@ export const STRENGTH_META = {
 
 const withScheme = (name, mv) => `${name} — ${mv.scheme}`;
 
+// 45-min PPL (Jeff Nippard style) — a third mode beside Home and Gym. Each
+// slot carries its own rep scheme + RPE. `mv` maps it to a movement pattern so
+// swaps, progression, and load increments all work; `alt` is the doc's listed
+// alternative, surfaced first in the swap list ahead of the extra catalog subs.
+export const EXPRESS = {
+  P: { name: "Push · 45-min", exercises: [
+    { name: "Barbell Bench Press", scheme: "3 × 6–8 · RPE 7-8", mv: "horizPush", alt: "Machine Chest Press" },
+    { name: "Seated Dumbbell Shoulder Press", scheme: "3 × 8–10 · RPE 8", mv: "vertPush", alt: "Machine Shoulder Press" },
+    { name: "Incline Dumbbell Press", scheme: "3 × 10–12 · RPE 8", mv: "inclinePush", alt: "Cable Fly (low-to-high)" },
+    { name: "Cable Lateral Raise", scheme: "3 × 12–15 · RPE 9", mv: "lateralRaise", alt: "Dumbbell Lateral Raise" },
+    { name: "Triceps Rope Pushdown", scheme: "3 × 10–12 · RPE 9-10", mv: "triceps", alt: "Overhead Cable Triceps Extension" },
+  ]},
+  U: { name: "Pull · 45-min", exercises: [
+    { name: "Lat Pulldown", scheme: "3 × 6–10 · RPE 7-8", mv: "vertPull", alt: "Assisted Pull-Up Machine" },
+    { name: "Chest-Supported Row", scheme: "3 × 8–10 · RPE 8", mv: "horizPull", alt: "Seated Cable Row" },
+    { name: "Single-Arm Dumbbell Row", scheme: "3 × 10–12 · RPE 8", mv: "horizPull", alt: "T-Bar Row" },
+    { name: "Face Pull", scheme: "3 × 12–15 · RPE 8-9", mv: "rearDelt", alt: "Reverse Pec Deck" },
+    { name: "EZ-Bar Curl", scheme: "3 × 10–12 · RPE 9-10", mv: "biceps", alt: "Cable Curl" },
+  ]},
+  L: { name: "Legs · 45-min", exercises: [
+    { name: "Barbell Back Squat", scheme: "3 × 6–8 · RPE 7-8", mv: "squat", alt: "Leg Press" },
+    { name: "Romanian Deadlift", scheme: "3 × 8–10 · RPE 8", mv: "hinge", alt: "Lying Leg Curl" },
+    { name: "Walking Lunge", scheme: "2–3 × 10–12/leg · RPE 8", mv: "lunge", alt: "Bulgarian Split Squat" },
+    { name: "Standing Calf Raise", scheme: "3 × 12–15 · RPE 9-10", mv: "calves", alt: "Seated Calf Raise" },
+  ]},
+};
+
+const EXPRESS_INDEX = (() => {
+  const m = {};
+  for (const day of Object.values(EXPRESS)) for (const e of day.exercises) m[e.name] = e;
+  return m;
+})();
+
 // Default STRENGTH object in the "Name — scheme" string shape the cards expect.
 export function buildStrength() {
   const out = {};
   for (const [id, def] of Object.entries(PROGRAM)) {
-    out[id] = { name: def.name, home: [], gym: [] };
+    out[id] = { name: def.name, home: [], gym: [], min45: [] };
     for (const key of def.movements) {
       const mv = MOVEMENTS[key];
       out[id].home.push(withScheme(mv.home[0], mv));
       out[id].gym.push(withScheme(mv.gym[0], mv));
     }
+    out[id].min45 = (EXPRESS[id]?.exercises || []).map((e) => `${e.name} — ${e.scheme}`);
   }
   return out;
 }
@@ -124,7 +158,7 @@ const NAME_TO_MOVEMENT = (() => {
   return map;
 })();
 
-export const movementOf = (name) => NAME_TO_MOVEMENT[name] || null;
+export const movementOf = (name) => NAME_TO_MOVEMENT[name] || EXPRESS_INDEX[name]?.mv || null;
 export const movementLabel = (name) => {
   const k = movementOf(name);
   return k ? MOVEMENTS[k].label : null;
@@ -132,6 +166,21 @@ export const movementLabel = (name) => {
 
 // Up to 5 alternatives that train the same pattern with the same equipment.
 export function substitutesFor(name, mode) {
+  if (mode === "min45") {
+    const e = EXPRESS_INDEX[name];
+    if (!e) return [];
+    const mv = MOVEMENTS[e.mv];
+    const pool = [e.alt, ...(mv ? mv.gym : [])].filter((n) => n && n !== name);
+    const seen = new Set();
+    const out = [];
+    for (const n of pool) {
+      if (seen.has(n)) continue;
+      seen.add(n);
+      out.push(`${n} — ${e.scheme}`);
+      if (out.length >= 5) break;
+    }
+    return out;
+  }
   const key = NAME_TO_MOVEMENT[name];
   if (!key) return [];
   const mv = MOVEMENTS[key];

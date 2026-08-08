@@ -54,9 +54,9 @@ export default function Coach({ data }) {
 
   return (
     <div className="fade-in">
-      <Card style={{ marginBottom: 12, borderColor: `color-mix(in srgb, ${color} 40%, var(--line))` }}>
+      <Card className="coach-verdict" style={{ marginBottom: 12, borderColor: `color-mix(in srgb, ${color} 40%, var(--line))` }}>
         <SectionLabel color={color}>Weekly review · coach's verdict</SectionLabel>
-        <div style={{ fontSize: 15, fontWeight: 700, color, lineHeight: 1.4, marginBottom: 10 }}>{v.headline}</div>
+        <div className="coach-verdict-headline" style={{ color }}>{v.headline}</div>
         {v.lines.map((l, i) => (
           <div key={i} className="row" style={{ gap: 8, alignItems: "baseline", padding: "4px 0", fontSize: 13 }}>
             <span style={{ color: l.ok ? "var(--good)" : "var(--dim)", fontWeight: 800, width: 14, flexShrink: 0 }}>{l.ok ? "✓" : "○"}</span>
@@ -69,7 +69,7 @@ export default function Coach({ data }) {
       <AdaptiveTargets data={data} />
 
       {/* streaks */}
-      <div className="row" style={{ gap: 10, marginBottom: 12 }}>
+      <div className="coach-streaks">
         <Card className="grow" style={{ textAlign: "center", padding: 12 }}>
           <div className="row" style={{ justifyContent: "center", gap: 6 }}>
             {streakDays > 0 && <Icon name="flame" size={22} color="var(--ember)" strokeWidth={2} />}

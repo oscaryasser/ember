@@ -4,11 +4,13 @@
 import { movementOf } from "./exercises.js";
 import { e1rm } from "./util.js";
 
-// Parse a rep target from a scheme string: "3 × 8–12" → [8,12], "3 × 15" → [12,15].
+// Parse a rep target from a scheme string. Reps live after the "×", so
+// "2–3 × 10–12/leg · RPE 8" → [10,12] (not the 2–3 sets), "3 × 15" → [12,15].
 export function repRange(scheme) {
-  const r = (scheme || "").match(/(\d+)\s*[–—-]\s*(\d+)/);
+  const afterX = ((scheme || "").split("×")[1]) ?? (scheme || "");
+  const r = afterX.match(/(\d+)\s*[–—-]\s*(\d+)/);
   if (r) return [parseInt(r[1], 10), parseInt(r[2], 10)];
-  const one = (scheme || "").match(/×\s*(\d+)/);
+  const one = afterX.match(/(\d+)/);
   if (one) { const n = parseInt(one[1], 10); return [Math.max(1, n - 3), n]; }
   return [8, 12];
 }

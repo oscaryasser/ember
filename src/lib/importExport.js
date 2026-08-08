@@ -82,7 +82,7 @@ function mergeCustom(a = {}, b = {}) {
   const out = {};
   for (const id of new Set([...Object.keys(a), ...Object.keys(b)])) {
     out[id] = {};
-    for (const mode of ["home", "gym"]) {
+    for (const mode of ["home", "gym", "min45"]) {
       const cur = (a[id] || {})[mode] || [];
       const inc = (b[id] || {})[mode] || [];
       out[id][mode] = [...cur, ...inc.filter((x) => !cur.includes(x))];

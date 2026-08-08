@@ -42,11 +42,11 @@ export default function Plan({ data, update }) {
           <Card key={id} style={{ marginTop: 12 }}>
             <SectionLabel color={STRENGTH_META[id].color}>{STRENGTH[id].name}</SectionLabel>
             <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
-              {["home", "gym"].map((m) => (
+              {["home", "gym", "min45"].map((m) => (
                 <div key={m} style={{ flex: "1 1 45%", minWidth: 200 }}>
                   <div className="row" style={{ fontSize: 13, fontWeight: 700, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em", gap: 5 }}>
-                    <Icon name={m === "home" ? "home" : "dumbbell"} size={15} color="var(--dim)" strokeWidth={2} />
-                    {m === "home" ? "Home (bands + vest)" : "Gym"}
+                    <Icon name={m === "home" ? "home" : m === "min45" ? "clock" : "dumbbell"} size={15} color="var(--dim)" strokeWidth={2} />
+                    {m === "home" ? "Home (bands + vest)" : m === "min45" ? "45-min (Nippard)" : "Gym"}
                   </div>
                   {[...STRENGTH[id][m], ...(((data.custom || {})[id] || {})[m] || [])].map((ex, i) => {
                     const isBase = i < STRENGTH[id][m].length;

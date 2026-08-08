@@ -106,7 +106,7 @@ export default function StrengthCard({ id, data, day, setDay, update, dateKey })
       )}
       <div className="row" style={{ justifyContent: "space-between", marginBottom: 10 }}>
         <div className="display" style={{ fontSize: 19, fontWeight: 700 }}>{STRENGTH[id].name}</div>
-        <Seg options={[["home", "Home"], ["gym", "Gym"]]} value={mode} onChange={(m) => setDay({ [modeKey]: m })} />
+        <Seg options={[["home", "Home"], ["gym", "Gym"], ["min45", "45-min"]]} value={mode} onChange={(m) => setDay({ [modeKey]: m })} />
       </div>
       {!allDone && (
         <button className="btn primary display" style={{ width: "100%", marginBottom: 10, padding: "13px 0", fontSize: 18, borderRadius: 12 }}

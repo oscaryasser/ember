@@ -63,17 +63,23 @@ export default function QuickLog({ data, update }) {
       {open && (
         <>
           <div className="sheet-backdrop" onClick={() => setOpen(false)} />
-          <div className="sheet fade-in">
+          <div className="sheet quick-log-sheet fade-in">
             {flash ? (
               <div style={{ textAlign: "center", padding: "26px 0", fontSize: 16, fontWeight: 800, color: "var(--good)" }}>✓ {flash}</div>
             ) : (
               <>
-                <div className="section-label">Quick log → today</div>
+                <div className="quick-log-heading">
+                  <div>
+                    <div className="section-label">Quick log</div>
+                    <div className="quick-log-title">Add to today</div>
+                  </div>
+                  <span className="quick-log-dot" aria-hidden="true" />
+                </div>
 
                 {recentFoods.length > 0 && (
                   <div style={{ marginBottom: 12 }}>
                     <div className="field-label">Food</div>
-                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                    <div className="quick-log-foods">
                       {recentFoods.map((f) => (
                         <button key={f.id} className="btn" style={{ fontSize: 13, fontWeight: 700 }} onClick={() => logFood(f)}>
                           {f.name} <span style={{ color: "var(--dim)", fontWeight: 400 }}>{f.kcal}</span>
@@ -85,7 +91,7 @@ export default function QuickLog({ data, update }) {
 
                 <div style={{ marginBottom: 12 }}>
                   <div className="field-label">Protein</div>
-                  <div style={{ display: "flex", gap: 6 }}>
+                  <div className="quick-log-grid">
                     {[10, 20, 30, 40].map((g) => (
                       <button key={g} className="btn grow" style={{ fontWeight: 800 }} onClick={() => addProtein(g)}>+{g}g</button>
                     ))}
@@ -94,7 +100,7 @@ export default function QuickLog({ data, update }) {
 
                 <div style={{ marginBottom: 12 }}>
                   <div className="field-label">Weigh-in</div>
-                  <div className="row" style={{ gap: 6 }}>
+                  <div className="quick-log-weight">
                     <input inputMode="decimal" placeholder={day.weight || "lbs"} value={weightDraft}
                       onChange={(e) => setWeightDraft(sanitizeDecimal(e.target.value))}
                       onKeyDown={(e) => e.key === "Enter" && saveWeight()}

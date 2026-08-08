@@ -65,26 +65,28 @@ export default function Today({ data, update, goTo }) {
   return (
     <div className="fade-in">
       {/* hero: the day as a budget + the week at a glance */}
-      <Card style={{ marginBottom: 12, display: "flex", alignItems: "center", gap: 10 }}>
+      <Card className="today-hero" style={{ marginBottom: 12 }}>
         <HeroRing data={data} day={day} />
-        <div className="grow" style={{ display: "flex", flexWrap: "wrap", gap: "8px 14px" }}>
-          <div style={{ flex: "1 1 40%", textAlign: "center" }}>
-            <div className="display" style={{ fontSize: 22, fontWeight: 700, color: weekStats.deficit > 0 ? "var(--good)" : weekStats.logged ? "var(--bad)" : "var(--dim)" }}>
+        <div className="today-hero-stats">
+          <div className="today-hero-stat">
+            <div className="today-hero-kicker">week balance</div>
+            <div className="display today-hero-value" style={{ color: weekStats.deficit > 0 ? "var(--good)" : weekStats.logged ? "var(--bad)" : "var(--dim)" }}>
               {weekStats.logged ? `${weekStats.deficit > 0 ? "−" : "+"}${Math.abs(Math.round(weekStats.deficit)).toLocaleString()}` : "—"}
             </div>
-            <div style={{ fontSize: 11, color: "var(--dim)", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700 }}>week kcal</div>
+            <div className="today-hero-meta">kcal so far</div>
           </div>
-          <div style={{ flex: "1 1 40%", textAlign: "center" }}>
-            <div className="display" style={{ fontSize: 22, fontWeight: 700, color: weekStats.runs + weekStats.strength >= sessionTarget ? "var(--good)" : "var(--text)" }}>
+          <div className="today-hero-stat">
+            <div className="today-hero-kicker">weekly training</div>
+            <div className="display today-hero-value" style={{ color: weekStats.runs + weekStats.strength >= sessionTarget ? "var(--good)" : "var(--text)" }}>
               {weekStats.runs + weekStats.strength}<span style={{ fontSize: 15, color: "var(--dim)" }}>/{sessionTarget}</span>
             </div>
-            <div style={{ fontSize: 11, color: "var(--dim)", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700 }}>sessions</div>
+            <div className="today-hero-meta">sessions done</div>
           </div>
-          <button onClick={() => goTo("progress")} style={{ flex: "1 1 100%", textAlign: "center" }}>
-            <span className="display" style={{ fontSize: 17, fontWeight: 700, color: "var(--ember)" }}>
+          <button onClick={() => goTo("progress")} className="today-weight-link">
+            <span className="display">
               {weights.length ? `${weights[weights.length - 1].w} lbs` : "no weigh-in"}
             </span>
-            <span style={{ fontSize: 11, color: "var(--dim)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}> · graph →</span>
+            <span>Progress →</span>
           </button>
         </div>
       </Card>
@@ -158,18 +160,14 @@ export default function Today({ data, update, goTo }) {
         return (
           <button
             onClick={() => sug.act && toggleActivity(sug.act)}
-            className="row"
-            style={{
-              width: "100%", textAlign: "left", gap: 10, marginBottom: 14, padding: "10px 12px",
-              borderRadius: 12, border: "1px solid color-mix(in srgb, var(--ember) 40%, var(--line))",
-              background: "color-mix(in srgb, var(--ember) 7%, transparent)",
-            }}>
+            className="next-action-card">
             <Icon name={sug.act === "run" ? "run" : sug.act ? "dumbbell" : "rest"} size={20} color="var(--ember)" strokeWidth={2} />
             <span className="grow">
-              <span style={{ fontSize: 14, fontWeight: 800, color: "var(--ember)" }}>{sug.label}</span>
-              <span style={{ fontSize: 12, color: "var(--dim)", display: "block" }}>{sug.why}</span>
+              <span className="next-action-eyebrow">Recommended today</span>
+              <span className="next-action-title">{sug.label}</span>
+              <span className="next-action-copy">{sug.why}</span>
             </span>
-            {sug.act && <span style={{ fontSize: 12, fontWeight: 800, color: "var(--ember)", flexShrink: 0 }}>tap to start →</span>}
+            {sug.act && <span className="next-action-cta">Start →</span>}
           </button>
         );
       })()}
