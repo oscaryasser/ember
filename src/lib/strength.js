@@ -1,4 +1,4 @@
-import { e1rm } from "./util.js";
+import { e1rm, normName } from "./util.js";
 
 // Exercise history across all logged days: [{ k, sets, topW, best }] sorted by date,
 // where `best` is the day's max Epley e1RM.
@@ -15,28 +15,40 @@ export function exerciseHistory(data, exName) {
 }
 
 // Scan every strength-day bucket (P/U/L now, legacy A/B still present in old
-// logs) so history stays continuous across a program change. Warm-up sets
-// (flagged `warm`) are excluded — they never count toward e1RM/PRs/volume.
+// logs) so history stays continuous across a program change. Names are matched
+// case-insensitively so the same lift carries across Gym / 45-min / Home modes.
+// Warm-up sets (flagged `warm`) are excluded — they never count toward e1RM.
 function collectSets(day, exName) {
+  const target = normName(exName);
   const res = [];
   for (const id of Object.keys(day?.sets || {})) {
-    const s = day.sets[id]?.[exName];
-    if (s && s.length) res.push(...s.filter((x) => !x.warm));
+    const bucket = day.sets[id] || {};
+    for (const nm of Object.keys(bucket)) {
+      if (normName(nm) !== target) continue;
+      const s = bucket[nm];
+      if (s && s.length) res.push(...s.filter((x) => !x.warm));
+    }
   }
   return res;
 }
 
 // Every exercise name that has at least one logged set, with session counts.
 export function loggedExercises(data) {
-  const map = new Map();
+  // Group by normalized name so casing variants (Gym vs 45-min) count as one.
+  const map = new Map(); // normKey -> { name, sessions }
   for (const day of Object.values(data.days)) {
     for (const id of Object.keys(day?.sets || {})) {
       for (const [name, sets] of Object.entries(day.sets[id] || {})) {
-        if (sets && sets.length) map.set(name, (map.get(name) || 0) + 1);
+        if (!(sets && sets.length)) continue;
+        const key = normName(name);
+        const cur = map.get(key) || { name, sessions: 0 };
+        cur.sessions += 1;
+        cur.name = name; // display the most-recently-seen casing
+        map.set(key, cur);
       }
     }
   }
-  return [...map.entries()].sort((a, b) => b[1] - a[1]).map(([name, sessions]) => ({ name, sessions }));
+  return [...map.values()].sort((a, b) => b.sessions - a.sessions);
 }
 
 // Best e1RM strictly before `dateKey` (for live PR detection while logging).
@@ -71,12 +83,17 @@ export function buildSetPatch(data, day, dateKey, id, exName, w, r, warm = false
 // Most recent prior day this exercise was logged, under any strength-day
 // bucket (so the "last time" hint follows an exercise across program changes).
 export function lastSetsFor(data, id, exName, beforeKey) {
+  const target = normName(exName);
   const keys = Object.keys(data.days).filter((k) => k < beforeKey).sort().reverse();
   for (const k of keys) {
     const buckets = data.days[k]?.sets || {};
     for (const bid of Object.keys(buckets)) {
-      const working = (buckets[bid]?.[exName] || []).filter((x) => !x.warm);
-      if (working.length) return { k, sets: working };
+      const bucket = buckets[bid] || {};
+      for (const nm of Object.keys(bucket)) {
+        if (normName(nm) !== target) continue;
+        const working = (bucket[nm] || []).filter((x) => !x.warm);
+        if (working.length) return { k, sets: working };
+      }
     }
   }
   return null;

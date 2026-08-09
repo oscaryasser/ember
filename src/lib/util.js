@@ -74,6 +74,10 @@ export const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 export const sanitizeDecimal = (v) => v.replace(/[^0-9.]/g, "");
 export const sanitizeInt = (v) => v.replace(/[^0-9]/g, "");
 
+// Canonical key for matching an exercise across modes/casings, so a lift logged
+// as "Barbell bench press" (Gym) carries to "Barbell Bench Press" (45-min).
+export const normName = (s) => (typeof s === "string" ? s.trim().toLowerCase().replace(/\s+/g, " ") : "");
+
 // Parse a stored snapshot; anything unreadable or non-object counts as absent.
 export const safeParse = (raw) => {
   if (!raw || typeof raw !== "string") return null;

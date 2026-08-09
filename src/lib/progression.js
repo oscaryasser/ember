@@ -2,7 +2,7 @@
 // RETAIN muscle, so we bias toward earned load increases and reps-in-reserve,
 // flag stalls, and prescribe a deload rather than grinding. Pure + testable.
 import { movementOf } from "./exercises.js";
-import { e1rm } from "./util.js";
+import { e1rm, normName } from "./util.js";
 
 // Parse a rep target from a scheme string. Reps live after the "×", so
 // "2–3 × 10–12/leg · RPE 8" → [10,12] (not the 2–3 sets), "3 × 15" → [12,15].
@@ -21,12 +21,15 @@ export const loadIncrement = (exName) => (LOWER.has(movementOf(exName)) ? 10 : 5
 
 // Per-session summary for an exercise across all day buckets, warm-ups excluded.
 export function sessionSummaries(data, exName) {
+  const target = normName(exName);
   const out = [];
   for (const [k, day] of Object.entries(data.days || {})) {
     const sets = [];
     for (const id of Object.keys(day?.sets || {})) {
-      const s = day.sets[id]?.[exName];
-      if (s) sets.push(...s.filter((x) => !x.warm));
+      const bucket = day.sets[id] || {};
+      for (const nm of Object.keys(bucket)) {
+        if (normName(nm) === target && bucket[nm]) sets.push(...bucket[nm].filter((x) => !x.warm));
+      }
     }
     if (!sets.length) continue;
     out.push({

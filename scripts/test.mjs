@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import { buildRunSegments, buildCustomSegments, totalSecs, RUN_WEEKS } from "../src/plan.js";
 import { buildStrength, substitutesFor, sessionList, movementOf, PROGRAM } from "../src/lib/exercises.js";
-import { buildSetPatch, exerciseHistory, lastSetsFor } from "../src/lib/strength.js";
+import { buildSetPatch, exerciseHistory, lastSetsFor, loggedExercises } from "../src/lib/strength.js";
 import { repRange, loadIncrement, progressionAdvice } from "../src/lib/progression.js";
 import { plateBreakdown, warmupRamp } from "../src/lib/plates.js";
 import { recompCheck } from "../src/lib/recomp.js";
@@ -351,6 +351,25 @@ test("progression advice works on a min45 slot scheme", () => {
   const a = progressionAdvice({ days }, "Barbell Bench Press", "2026-08-10", "3 × 6–8 · RPE 7-8");
   assert.equal(a.status, "add-weight"); // hit top (8) → add load
   assert.match(a.msg, /add 5 lb/);
+});
+
+console.log("cross-mode history (case-insensitive)");
+test("a lift logged in Gym casing carries to the 45-min title-case name", () => {
+  const data = { days: { "2026-08-01": { sets: { P: { "Barbell bench press": [{ w: 185, r: 8 }] } } } } };
+  const last = lastSetsFor(data, "P", "Barbell Bench Press", "2026-08-10");
+  assert.ok(last && last.sets[0].w === 185, "lastSetsFor finds it across casing");
+  assert.equal(exerciseHistory(data, "Barbell Bench Press").length, 1);
+  const a = progressionAdvice(data, "Barbell Bench Press", "2026-08-10", "3 × 6–8 · RPE 7-8");
+  assert.equal(a.status, "add-weight"); // 185×8 = top of 6–8 → carries + prescribes
+});
+test("loggedExercises merges casing variants into one entry", () => {
+  const data = { days: {
+    "2026-08-01": { sets: { P: { "Face pull": [{ w: 30, r: 15 }] } } },
+    "2026-08-04": { sets: { P: { "Face Pull": [{ w: 30, r: 15 }] } } },
+  } };
+  const faces = loggedExercises(data).filter((e) => e.name.toLowerCase() === "face pull");
+  assert.equal(faces.length, 1);
+  assert.equal(faces[0].sessions, 2);
 });
 
 console.log("lifting progression coach");
