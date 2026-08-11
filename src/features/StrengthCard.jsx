@@ -5,6 +5,8 @@ import { num, round1, sanitizeDecimal, sanitizeInt } from "../lib/util.js";
 import { lastSetsFor, buildSetPatch } from "../lib/strength.js";
 import { warmupRamp, BAR } from "../lib/plates.js";
 import { progressionAdvice } from "../lib/progression.js";
+import { muscleOf } from "../lib/exerciseDB.js";
+import ExercisePicker from "../components/ExercisePicker.jsx";
 import Icon from "../components/Icon.jsx";
 import { fmtClock } from "../lib/dates.js";
 import { unlockAudio, cues } from "../lib/audio.js";
@@ -18,6 +20,8 @@ export default function StrengthCard({ id, data, day, setDay, update, dateKey })
   const [gymOpen, setGymOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [swapFor, setSwapFor] = useState(null); // base index whose subs are open
+  const [pickAdd, setPickAdd] = useState(false);
+  const [pickSwap, setPickSwap] = useState(null); // { i, name } for the "more" swap picker
   const { startRest } = useRestTimer();
 
   const modeKey = "mode" + id;
@@ -70,16 +74,14 @@ export default function StrengthCard({ id, data, day, setDay, update, dateKey })
     setDay({ checks: { ...(day.checks || {}), [id]: arr } });
   };
 
-  const addCustom = () => {
-    const t = draft.trim();
-    if (!t) return;
+  const addCustomStr = (str) => {
+    if (!str) return;
     update((d) => {
-      const c = { A: { home: [], gym: [] }, B: { home: [], gym: [] }, ...(d.custom || {}) };
-      c[id] = { home: [], gym: [], ...c[id] };
-      c[id][mode] = [...(c[id][mode] || []), t];
+      const c = { ...(d.custom || {}) };
+      c[id] = { home: [], gym: [], ...(c[id] || {}) };
+      c[id][mode] = [...(c[id][mode] || []), str];
       return { ...d, custom: c };
     });
-    setDraft("new", "");
   };
 
   const removeCustom = (ci) => {
@@ -205,6 +207,8 @@ export default function StrengthCard({ id, data, day, setDay, update, dateKey })
                     <button key={s} className="btn" style={{ fontSize: 13, fontWeight: 600 }}
                       onClick={() => setSwap(i, s)}>{s.split("—")[0].trim()}</button>
                   ))}
+                  <button className="btn" style={{ fontSize: 13, fontWeight: 700, color: "var(--fuel)", borderColor: "color-mix(in srgb, var(--fuel) 35%, var(--line))" }}
+                    onClick={() => { setPickSwap({ i, name: exName }); setSwapFor(null); }}>More…</button>
                   {isSwapped(i) && (
                     <button className="btn ghost" style={{ fontSize: 13 }} onClick={() => setSwap(i, null)}>↺ Reset</button>
                   )}
@@ -257,19 +261,22 @@ export default function StrengthCard({ id, data, day, setDay, update, dateKey })
         );
       })}
 
-      <div className="row" style={{ gap: 8, marginTop: 10 }}>
-        <input className="body-font" value={draft} onChange={(e) => setDraft("new", e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && addCustom()}
-          placeholder={`Add your own (${mode}) — e.g. Face pulls — 3 × 15`}
-          style={{ fontSize: 15, padding: "10px 12px" }} />
-        <button onClick={addCustom} className="btn"
-          style={draft.trim() ? { background: "var(--ember)", color: "var(--on-accent)", borderColor: "var(--ember)", fontWeight: 800 } : { fontWeight: 800, color: "var(--dim)" }}>
-          Add
-        </button>
-      </div>
+      <button className="btn row" style={{ width: "100%", marginTop: 10, justifyContent: "center", gap: 6, color: "var(--fuel)", fontWeight: 700, borderColor: "color-mix(in srgb, var(--fuel) 30%, var(--line))" }}
+        onClick={() => setPickAdd(true)}>
+        <Icon name="plus" size={16} color="var(--fuel)" strokeWidth={2.2} /> Add exercise from library
+      </button>
       <div style={{ fontSize: 13, color: "var(--dim)", marginTop: 8 }}>
         Hit 12 clean reps on everything → add load or reps next time. A {Math.round((data.goals.restSecs || 90))}s rest timer starts on every logged set.
       </div>
+
+      {pickAdd && (
+        <ExercisePicker data={data} dateKey={dateKey} title="Add exercise"
+          onPick={(str) => { addCustomStr(str); setPickAdd(false); }} onClose={() => setPickAdd(false)} />
+      )}
+      {pickSwap && (
+        <ExercisePicker data={data} dateKey={dateKey} title="Swap to" muscle={muscleOf(pickSwap.name)}
+          onPick={(str) => { setSwap(pickSwap.i, str); setPickSwap(null); }} onClose={() => setPickSwap(null)} />
+      )}
     </Card>
   );
 }

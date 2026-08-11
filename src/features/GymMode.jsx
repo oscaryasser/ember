@@ -4,6 +4,8 @@ import { num, round1, e1rm, sanitizeDecimal, sanitizeInt } from "../lib/util.js"
 import { lastSetsFor, buildSetPatch, bestBefore } from "../lib/strength.js";
 import { plateBreakdown, warmupRamp, BAR } from "../lib/plates.js";
 import { progressionAdvice } from "../lib/progression.js";
+import { muscleOf } from "../lib/exerciseDB.js";
+import ExercisePicker from "../components/ExercisePicker.jsx";
 import { fmtClock } from "../lib/dates.js";
 import { unlockAudio, cues } from "../lib/audio.js";
 import { keepAwake, releaseAwake } from "../lib/wakeLock.js";
@@ -28,7 +30,7 @@ export default function GymMode({ id, data, day, setDay, update, dateKey, onClos
   const [ended, setEnded] = useState(false);
   const [swapOpen, setSwapOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
-  const [addDraft, setAddDraft] = useState("");
+  const [swapPick, setSwapPick] = useState(false); // "more" swap picker open
 
   // Session stopwatch — total workout time, live in the header.
   const startRef = useRef(Date.now());
@@ -108,18 +110,17 @@ export default function GymMode({ id, data, day, setDay, update, dateKey, onClos
   });
   const removedSlots = hidden.map((i) => ({ i, name: (base[i] || "").split("—")[0].trim() })).filter((x) => x.name);
 
-  // Add an exercise to this routine mid-session (bodyweight or loaded), and jump to it.
-  const addExercise = () => {
-    const t = addDraft.trim();
-    if (!t || !update) return;
+  // Add an exercise to this routine mid-session (from the picker), and jump to it.
+  const addExerciseStr = (str) => {
+    if (!str || !update) return;
     update((d) => {
       const c = { ...(d.custom || {}) };
       c[id] = { home: [], gym: [], ...(c[id] || {}) };
-      c[id][mode] = [...(c[id][mode] || []), t];
+      c[id][mode] = [...(c[id][mode] || []), str];
       return { ...d, custom: c };
     });
     setIdx(visible.length);       // the appended custom exercise becomes last-visible
-    setAddDraft(""); setAddOpen(false); setWDraft(""); setRDraft("");
+    setAddOpen(false); setWDraft(""); setRDraft("");
   };
 
   const logSet = (warm = false, bodyweight = false) => {
@@ -170,7 +171,7 @@ export default function GymMode({ id, data, day, setDay, update, dateKey, onClos
       </div>
 
       {!ended ? (
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", gap: 14 }}>
+        <div className="gym-scroll"><div className="gym-inner">
           {/* exercise pager */}
           <div className="row" style={{ justifyContent: "center", gap: 6 }}>
             {visible.map((v, p) => (
@@ -211,6 +212,8 @@ export default function GymMode({ id, data, day, setDay, update, dateKey, onClos
                   <button key={s} className="btn" style={{ fontSize: 13, fontWeight: 600 }}
                     onClick={() => setSwap(origIdx, s)}>{s.split("—")[0].trim()}</button>
                 ))}
+                <button className="btn" style={{ fontSize: 13, fontWeight: 700, color: "var(--fuel)", borderColor: "color-mix(in srgb, var(--fuel) 35%, var(--line))" }}
+                  onClick={() => setSwapPick(true)}>More…</button>
                 {((day.swaps || {})[id] || {})[origIdx] !== undefined && (
                   <button className="btn ghost" style={{ fontSize: 13 }} onClick={() => setSwap(origIdx, null)}>↺ Reset</button>
                 )}
@@ -334,20 +337,10 @@ export default function GymMode({ id, data, day, setDay, update, dateKey, onClos
             <button className="btn grow" disabled={pos >= visible.length - 1} onClick={() => goTo(pos + 1)}>Next →</button>
           </div>
 
-          {addOpen ? (
-            <div className="row" style={{ gap: 8 }}>
-              <input className="body-font" autoFocus value={addDraft} onChange={(e) => setAddDraft(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && addExercise()}
-                placeholder="Add exercise — e.g. Lunges — 3 × 10" style={{ fontSize: 15, padding: "10px 12px" }} />
-              <button className="btn primary" style={{ fontWeight: 800 }} disabled={!addDraft.trim()} onClick={addExercise}>Add</button>
-              <button className="btn ghost" onClick={() => { setAddOpen(false); setAddDraft(""); }}>Cancel</button>
-            </div>
-          ) : (
-            <button className="btn ghost row" style={{ justifyContent: "center", gap: 6, color: "var(--fuel)", fontSize: 14 }} onClick={() => setAddOpen(true)}>
-              <Icon name="plus" size={16} color="var(--fuel)" strokeWidth={2.2} /> Add exercise to this workout
-            </button>
-          )}
-        </div>
+          <button className="btn ghost row" style={{ justifyContent: "center", gap: 6, color: "var(--fuel)", fontSize: 14 }} onClick={() => setAddOpen(true)}>
+            <Icon name="plus" size={16} color="var(--fuel)" strokeWidth={2.2} /> Add exercise to this workout
+          </button>
+        </div></div>
       ) : (
         <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", textAlign: "center", gap: 14 }}>
           <Icon name="dumbbell" size={48} color="var(--ember)" strokeWidth={2} style={{ margin: "0 auto" }} />
@@ -365,6 +358,15 @@ export default function GymMode({ id, data, day, setDay, update, dateKey, onClos
           <button className="btn primary display" style={{ fontSize: 20, padding: "14px 0", borderRadius: 16 }} onClick={close}>Done</button>
           <button className="btn ghost" onClick={() => setEnded(false)}>← Back to session</button>
         </div>
+      )}
+
+      {addOpen && (
+        <ExercisePicker data={data} dateKey={dateKey} title="Add exercise"
+          onPick={addExerciseStr} onClose={() => setAddOpen(false)} />
+      )}
+      {swapPick && (
+        <ExercisePicker data={data} dateKey={dateKey} title="Swap to" muscle={muscleOf(exName)}
+          onPick={(str) => { setSwap(origIdx, str); setSwapPick(false); }} onClose={() => setSwapPick(false)} />
       )}
     </div>
   );

@@ -320,6 +320,33 @@ test("a working set still PRs over history despite warm-ups present", () => {
   assert.ok(pr && pr.new > pr.old);
 });
 
+console.log("exercise database (add / swap picker)");
+{
+  const { ALL_EXERCISES, MUSCLE_GROUPS, searchExercises, muscleOf, sameMuscle } = await import("../src/lib/exerciseDB.js");
+  test("DB is populated and grouped by muscle", () => {
+    assert.ok(ALL_EXERCISES.length >= 80, `only ${ALL_EXERCISES.length}`);
+    assert.ok(MUSCLE_GROUPS.includes("Chest") && MUSCLE_GROUPS.includes("Quads"));
+    assert.ok(ALL_EXERCISES.every((e) => e.name && e.scheme && e.muscle));
+  });
+  test("has the specific variants the user asked for", () => {
+    const names = ALL_EXERCISES.map((e) => e.name);
+    assert.ok(names.includes("Leg Press") && names.includes("Incline Leg Press"));
+    assert.ok(names.includes("Incline Dumbbell Press (45°)"));
+    assert.ok(names.includes("Machine Chest Press") && names.includes("Hack Squat"));
+  });
+  test("search is case-insensitive and substring", () => {
+    assert.ok(searchExercises("incline").length >= 3);
+    assert.ok(searchExercises("LEG press").some((e) => e.name === "Leg Press"));
+    assert.equal(searchExercises("zzzzz").length, 0);
+  });
+  test("muscleOf + sameMuscle power the swap 'more' list", () => {
+    assert.equal(muscleOf("Leg Press"), "Quads");
+    assert.equal(muscleOf("Face Pull"), "Rear delts");
+    const others = sameMuscle("Leg Press");
+    assert.ok(others.length >= 5 && !others.some(([n]) => n === "Leg Press"));
+  });
+}
+
 console.log("45-min (Nippard) mode");
 test("buildStrength includes min45: Push/Pull 5, Legs 4, with RPE in scheme", () => {
   const S = buildStrength();

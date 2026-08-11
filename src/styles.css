@@ -199,6 +199,10 @@ button {
   padding: calc(18px + env(safe-area-inset-top)) 18px calc(18px + env(safe-area-inset-bottom));
   transition: background 0.4s;
 }
+/* Scrollable session body so Prev/Next and all controls stay reachable even
+   with many logged sets. Inner min-height:100% centers short sessions. */
+.gym-scroll { flex: 1; min-height: 0; overflow-y: auto; }
+.gym-inner { display: flex; flex-direction: column; justify-content: center; min-height: 100%; gap: 14px; padding: 4px 0; }
 
 .rest-bar {
   position: fixed;
@@ -261,7 +265,7 @@ button {
 .grow { flex: 1; }
 
 .modal-scrim {
-  position: fixed; inset: 0; z-index: 55;
+  position: fixed; inset: 0; z-index: 80;
   background: rgba(0, 0, 0, 0.55);
   display: flex; align-items: flex-end; justify-content: center;
 }
