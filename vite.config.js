@@ -13,6 +13,11 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
+      // No service worker in the native app: Capacitor already bundles every
+      // asset locally, and a SW inside the persistent WKWebView serves stale
+      // content and interferes with Capacitor's fetches (it broke HealthKit and
+      // masked code updates). PWA/offline stays on for the web build only.
+      disable: isNative,
       registerType: "autoUpdate",
       includeAssets: ["apple-touch-icon.png", "favicon.svg"],
       manifest: {
